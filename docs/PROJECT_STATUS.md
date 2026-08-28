@@ -99,3 +99,23 @@ O, con Docker: `docker compose up --build`.
 ## Próximo módulo
 Ninguno pendiente de la lista original. Los "próximos pasos naturales"
 quedan listados arriba para cuando quieras continuar el proyecto.
+
+## Actualización — resolución de red y entrega a GitHub
+
+- El bloqueo de red para `prisma generate` en el sandbox de desarrollo
+  (dominio `binaries.prisma.sh` fuera de la lista permitida, y
+  `prisma-engines` no publica esos binarios como releases de GitHub)
+  se resolvió agregando `.github/workflows/ci.yml`: GitHub Actions sí
+  tiene acceso completo a internet, así que ahí `prisma generate`,
+  `typecheck`, `lint`, migraciones contra un PostgreSQL efímero,
+  pruebas y build corren automáticamente en cada push/PR.
+- El repositorio Git local ya está inicializado dentro del proyecto
+  entregado (`git init` + primer commit), con `.gitignore` excluyendo
+  `node_modules` y `.next`. Sólo falta que se agregue tu remoto de
+  GitHub y se haga `git push` (ver README, sección "Subir el proyecto
+  a GitHub").
+- Pendiente inmediato al trabajar localmente por primera vez con
+  PostgreSQL real: generar la migración inicial
+  (`npm run prisma:migrate:dev -- --name init`) y subir la carpeta
+  `prisma/migrations/` resultante — no se pudo generar aquí por la
+  misma razón de red.
