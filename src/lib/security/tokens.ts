@@ -25,9 +25,15 @@ export function hashToken(token: string): string {
 const ALPHABET = "23456789ABCDEFGHJKMNPQRSTUVWXYZ";
 
 export function generateLicenseFolio(): string {
-  const group = () =>
-    Array.from({ length: 4 }, () => ALPHABET[randomBytes(1)[0] % ALPHABET.length]).join(
-      "",
-    );
+  const randomChar = () => {
+    // randomBytes(1) siempre devuelve un Buffer de longitud 1, y el
+    // resultado del módulo siempre cae dentro de ALPHABET; los `!` son
+    // seguros aquí. Se anotan explícitamente porque `noUncheckedIndexedAccess`
+    // (tsconfig.json) marca todo acceso por índice como potencialmente
+    // `undefined`.
+    const byte = randomBytes(1)[0]!;
+    return ALPHABET[byte % ALPHABET.length]!;
+  };
+  const group = () => Array.from({ length: 4 }, randomChar).join("");
   return `EXCOBA-${group()}-${group()}`;
 }
