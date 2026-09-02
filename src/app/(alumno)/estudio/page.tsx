@@ -1,8 +1,6 @@
 import { getPublishedCurriculum } from "@/server/use-cases/academic-content";
-import { requireUser } from "@/lib/authorization";
 
 export default async function EstudioPage() {
-  await requireUser();
   const subjects = await getPublishedCurriculum();
 
   return (
