@@ -19,7 +19,8 @@ export const ResetPasswordSchema = z.object({
  * sólo ocurre si el usuario existe.
  */
 export async function requestPasswordReset(input: z.infer<typeof RequestPasswordResetSchema>) {
-  const { email } = RequestPasswordResetSchema.parse(input);
+  const parsed = RequestPasswordResetSchema.parse(input);
+  const email = parsed.email.trim().toLowerCase();
   const user = await db.user.findUnique({ where: { email } });
 
   if (user) {

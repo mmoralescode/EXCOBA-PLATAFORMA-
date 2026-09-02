@@ -13,7 +13,10 @@ export type LoginInput = z.infer<typeof LoginInputSchema>;
 export class LoginError extends Error {}
 
 export async function login(input: LoginInput, userAgent?: string) {
-  const data = LoginInputSchema.parse(input);
+  const parsed = LoginInputSchema.parse(input);
+  // Normaliza el correo (espacios y mayúsculas no deben importar): sin
+  // esto, "Admin@excoba.local" no encontraría a "admin@excoba.local".
+  const data = { ...parsed, email: parsed.email.trim().toLowerCase() };
 
   const user = await db.user.findUnique({ where: { email: data.email } });
 

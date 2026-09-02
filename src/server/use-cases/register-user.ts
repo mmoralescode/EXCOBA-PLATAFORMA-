@@ -20,7 +20,8 @@ export class RegisterError extends Error {}
  * ASIGNADA/reservada temporalmente para este registro.
  */
 export async function registerUser(input: RegisterInput) {
-  const data = RegisterInputSchema.parse(input);
+  const parsed = RegisterInputSchema.parse(input);
+  const data = { ...parsed, email: parsed.email.trim().toLowerCase() };
 
   const existing = await db.user.findUnique({ where: { email: data.email } });
   if (existing) {
@@ -30,7 +31,15 @@ export async function registerUser(input: RegisterInput) {
   }
 
   const license = await db.license.findUnique({ where: { id: data.licenseId } });
-  if (!license || license.userId || license.status !== "ASIGNADA") {
+  // Debe aceptar los mismos estados que valida `validateLicenseFolio`
+  // (CREADA o ASIGNADA) — antes sólo aceptaba ASIGNADA, lo que rechazaba
+  // el registro de cualquier folio recién creado que nunca pasó por una
+  // asignación manual previa.
+  const licenseIsUsable =
+    license &&
+    !license.userId &&
+    (license.status === "CREADA" || license.status === "ASIGNADA");
+  if (!licenseIsUsable) {
     throw new RegisterError("No fue posible completar el registro con estos datos.");
   }
 
