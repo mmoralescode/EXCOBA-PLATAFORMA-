@@ -20,6 +20,17 @@ const nextConfig = {
     serverActions: {
       bodySizeLimit: "1mb",
     },
+    // argon2 tiene un binario nativo (.node) compilado por plataforma.
+    // Sin esto, el empaquetado/tracing automático de Next.js para
+    // Route Handlers a veces no incluye ese binario en el bundle de la
+    // función serverless (falla intermitente por ruta: algunas rutas
+    // que importan argon2 sí lo encuentran en runtime, otras no, según
+    // cómo el analizador estático siguió el grafo de imports). Esto le
+    // dice a Next.js que deje `argon2` como un require() externo real en
+    // vez de intentar empaquetarlo, para que el tracing de archivos de
+    // Vercel copie el paquete completo (incluidos los binarios
+    // precompilados) tal como está en node_modules.
+    serverComponentsExternalPackages: ["argon2"],
   },
 };
 
