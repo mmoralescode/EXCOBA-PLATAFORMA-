@@ -1,5 +1,5 @@
 import { PrismaClient, RoleName, ContentStatus, Difficulty } from "@prisma/client";
-import argon2 from "argon2";
+import { hashPassword } from "../src/lib/security/password";
 
 const db = new PrismaClient();
 
@@ -24,9 +24,7 @@ async function main() {
 
   // --- Usuario SUPER_ADMIN de desarrollo ---
   const adminEmail = "admin@excoba.local";
-  const adminPasswordHash = await argon2.hash("CambiaEstaPassword123!", {
-    type: argon2.argon2id,
-  });
+  const adminPasswordHash = await hashPassword("CambiaEstaPassword123!");
 
   const admin = await db.user.upsert({
     where: { email: adminEmail },
