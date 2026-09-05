@@ -6,15 +6,27 @@ Next.js + TypeScript + PostgreSQL + Prisma, sin dependencia de servicios
 de IA en producción. Puede ejecutarse, mantenerse y desplegarse sin
 acceso a la conversación en la que fue generada.
 
+**Ya está desplegada y funcionando en producción:**
+https://excoba-plataforma.vercel.app — este repositorio es el código
+fuente completo de esa instancia.
+
 ## Estado del proyecto
 
-Ver [`docs/PROJECT_STATUS.md`](./docs/PROJECT_STATUS.md) para el detalle
-módulo por módulo (completado, decisiones tomadas, próximos pasos).
+Ver [`docs/PROJECT_STATUS.md`](./docs/PROJECT_STATUS.md) — incluye,
+además del avance por módulo, una lista de ajustes importantes que se
+descubrieron al depurar el despliegue real (versión de Node, forma de
+hashear contraseñas, cabecera CSP) que **no son opcionales** si vas a
+desplegar esto en otro lugar: revísala antes de empezar.
 
 ## Requisitos
 
-- Node.js 20 o superior
-- PostgreSQL 15 o superior (o Docker, ver más abajo)
+- Node.js **20.x exactamente** (ver `docs/PROJECT_STATUS.md` — punto 2:
+  versiones más nuevas no tienen binarios nativos compatibles para
+  algunas dependencias en Vercel; en desarrollo local casi cualquier
+  Node 20 funciona bien)
+- PostgreSQL 15 o superior (o Docker, ver más abajo) — en producción se
+  usa [Neon](https://neon.tech) (Postgres serverless), pero cualquier
+  PostgreSQL estándar funciona
 - npm
 
 ## Instalación local (sin Docker)
@@ -28,6 +40,7 @@ cp .env.example .env
 # Edita .env: DATABASE_URL, SESSION_SECRET (openssl rand -base64 48), etc.
 
 # 3. Crear la base de datos en tu PostgreSQL local, ej.:
+
 #    createdb excoba_dev
 
 # 4. Generar el cliente de Prisma y aplicar migraciones

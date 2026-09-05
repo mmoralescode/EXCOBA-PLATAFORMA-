@@ -1,121 +1,78 @@
 # Estado del proyecto
 
 ## Completado
-- **Módulo 1**: Diseño técnico final (arquitectura, modelo de datos,
-  flujos críticos, plan de seguridad y pruebas, roadmap).
-- **Módulo 2**: Inicialización (Next.js + TypeScript + Tailwind,
-  estructura, README, `.env.example`, ESLint/Prettier).
-- **Módulo 3**: `prisma/schema.prisma` completo (usuarios, roles,
-  licencias, contenido académico, intentos, progreso, auditoría,
-  monetización) + `prisma/seed.ts` (roles, admin demo, materias de la
-  guía, producto, pregunta de ejemplo por materia).
-- **Módulo 4**: Autenticación (registro atado a licencia, login,
-  logout, recuperación de contraseña), Argon2id, sesión única
-  server-side, middleware de rutas protegidas y cabeceras de
-  seguridad base.
-- **Módulo 5**: Licencias y folios — generación (`createLicense`),
-  validación previa al registro (`validateLicenseFolio`) sin revelar
-  la causa del rechazo, endpoints de activación y alta admin.
-- **Módulo 6**: Gestión académica — CRUD de materias/temas/lecciones/
-  preguntas (rol EDITOR_ACADEMICO), lectura de currícula publicada
-  para el alumno sin exponer `isCorrect`.
-- **Módulo 7**: Práctica — selección aleatoria de preguntas, entrega
-  con calificación 100% server-side, actualización de `progress` y
-  algoritmo de priorización por reglas medibles (sin IA).
-- **Módulo 8**: Simulador — cronómetro server-authoritative, autosave
-  por pregunta, recuperación de estado ante desconexión,
-  auto-expiración por tiempo, resultados por materia (`exam_results`).
-- **Módulo 9**: Panel administrativo — layout con guardia de rol,
-  resumen de métricas, listado de licencias.
-- **Módulo 10**: Auditoría reutilizable (`logAudit`), rate limiting ya
-  integrado en endpoints sensibles desde módulos previos, pruebas
-  unitarias (hashing de contraseñas, tokens/folios, rate limiter).
-- **Módulo 11**: README completo (instalación, Docker, despliegue,
-  dominio/HTTPS, respaldo, monitoreo, checklists), `docker-compose.yml`
-  y `Dockerfile` opcionales.
+- Los 11 módulos originales (diseño, init, base de datos, auth, licencias,
+  contenido académico, práctica, simulador, admin, seguridad, despliegue).
+- Las 6 pantallas de alumno: login, activar folio + registro, recuperar
+  contraseña, práctica, simulador, perfil.
+- **Desplegado y funcionando en producción**: https://excoba-plataforma.vercel.app
+- Base de datos real en Neon (PostgreSQL), con las 22 tablas creadas y
+  datos de arranque cargados (roles, admin, producto, 7 materias con tema
+  y pregunta de ejemplo).
+- Envío real de correo (recuperación de contraseña, folios asignados) vía
+  Resend — requiere `EMAIL_PROVIDER=resend` y `RESEND_API_KEY` en las
+  variables de entorno (ver README).
 
-## En progreso
-- Ninguno — los 11 módulos definidos en la especificación quedaron
-  cubiertos con código funcional.
+## Decisiones/cambios importantes tomados DESPUÉS del diseño original
+Estos ajustes surgieron al depurar el despliegue real en Vercel y son
+importantes si vuelves a desplegar desde cero:
 
-## Pendiente (fuera del alcance funcional entregado; siguientes pasos naturales)
-- Formularios de UI para login/registro/activación de folio y las
-  pantallas de práctica/simulador (hoy los endpoints están completos y
-  probables desde cualquier cliente HTTP; falta la interfaz visual
-  completa de alumno más allá de `/estudio`).
-- Integración real de un proveedor de correo transaccional (hoy
-  `sendEmail` registra en consola fuera de producción; ver
-  `src/lib/email/mailer.ts`).
-- Fase 4 (pagos, generación automática de licencias, cupones) — el
-  modelo de datos (`Payment`, `Coupon`) ya existe, la lógica de negocio
-  no.
-- Pruebas de integración end-to-end contra PostgreSQL real (folio →
-  registro → práctica → simulador) con Playwright/Vitest + Testcontainers.
-- Repetición espaciada, rachas, logros, PWA (Fase 5).
+1. **`next.config.mjs`, no `next.config.ts`** — Next.js 14.x no soporta
+   configuración en TypeScript (eso llegó hasta Next 15).
+2. **Node.js fijado a `20.x`** en `package.json` (`engines.node`) — se
+   dejó abierto originalmente (`>=20.0.0`) y Vercel resolvió a una
+   versión demasiado nueva sin binarios nativos disponibles para algunas
+   dependencias.
+3. **Hashing de contraseñas con `hash-wasm` (Argon2id en WebAssembly),
+   NO con el paquete `argon2`** — el paquete `argon2` (binding nativo)
+   sufría fallos intermitentes e impredecibles en el empaquetado
+   por-ruta de Vercel (algunas rutas serverless incluían el binario
+   nativo correctamente, otras no, de forma inconsistente). WASM no
+   tiene este problema porque es un archivo de datos normal, no un
+   binario específico de plataforma. Los parámetros de seguridad
+   (memoria=64MB, iteraciones=3, paralelismo=4) son idénticos, así que
+   cualquier hash generado antes con el paquete `argon2` sigue siendo
+   válido.
+4. **CSP basada en nonce, no `script-src 'self'` a secas** — Next.js
+   necesita ejecutar scripts en línea propios para hidratar React en el
+   navegador; sin nonce, la CSP los bloqueaba y la app se veía bien pero
+   ningún formulario/botón funcionaba (recaía a envío nativo de HTML).
+   Ver `src/middleware.ts` y `src/app/layout.tsx` (éste último fuerza
+   renderizado dinámico leyendo `headers()`, necesario para que el nonce
+   nunca quede "congelado" en una página estática).
+5. **`vercel.json` con `"framework": "nextjs"` explícito** — el proyecto
+   en Vercel se había creado antes de que existiera código real, y quedó
+   sin detectar el framework correctamente.
+6. **Sin carpeta `prisma/migrations/` todavía** — la base de datos de
+   producción en Neon se creó ejecutando el DDL equivalente a mano (sin
+   acceso a los binarios de Prisma en el entorno donde se desarrolló
+   esto). Si vas a trabajar localmente con una base de datos nueva, la
+   primera vez tendrás que correr `npx prisma migrate dev --name init`
+   tú mismo para generar esa carpeta — el `schema.prisma` sí está
+   completo y es la fuente de verdad.
 
-## Archivos creados o modificados (acumulado)
-Ver el árbol completo del proyecto entregado en el zip final. Resumen
-por área: configuración raíz (`package.json`, `tsconfig.json`,
-`next.config.ts`, Tailwind/PostCSS/ESLint/Prettier, `.env.example`,
-`Dockerfile`, `docker-compose.yml`); `prisma/` (schema + seed);
-`src/db/`, `src/lib/` (seguridad, sesión, autorización, email,
-auditoría), `src/server/use-cases/` (un archivo por caso de uso);
-`src/app/api/` (endpoints REST por módulo); `src/app/(alumno)/` y
-`src/app/(admin)/` (páginas server-rendered); `tests/`.
+## Pendiente / próximos pasos naturales
+- Verificar un dominio propio en Resend (mientras tanto, sólo puede
+  enviar correos a la dirección con la que se registró la cuenta de
+  Resend — limitación de su modo sandbox).
+- Automatizar la generación/entrega de folios al comprar la guía (en
+  definición: nivel de automatización y método de pago).
+- UI de administración para crear licencias desde el panel (hoy sólo
+  existe el endpoint `POST /api/admin/licenses` y la vista de sólo
+  lectura `/admin/licenses`).
+- Cargar el banco de preguntas real de la guía (hoy sólo hay una
+  pregunta de ejemplo por materia).
+- Workflow de CI (`.github/workflows/ci.yml`) — existe en el historial
+  pero no se pudo subir a GitHub por permisos del token usado; se puede
+  agregar manualmente desde la interfaz web de GitHub cuando se quiera.
+- Fase 4 completa (pagos, cupones, facturación) y Fase 5 (repetición
+  espaciada, rachas, PWA).
 
-## Decisiones técnicas tomadas
-- Next.js 14 (App Router) + TypeScript estricto + PostgreSQL + Prisma
-  + Zod + Tailwind + Argon2id, monolito modular (ver Módulo 1).
-- Sesión server-side revocable en `sessions`, una sesión activa por
-  usuario (login nuevo revoca la anterior).
-- Folios y tokens sensibles almacenados sólo como hash SHA-256;
-  respuestas de validación siempre genéricas para evitar enumeración.
-- Calificación de intentos (práctica y simulador) siempre en el
-  servidor, comparando contra `Answer.isCorrect`; el cliente nunca
-  recibe esa columna.
-- Algoritmo de prioridad de estudio basado en fórmula explícita y
-  configurable (pesos/umbrales documentados en
-  `src/server/use-cases/study-priority.ts`), sin IA.
-- Rate limiting en memoria como backend inicial (ver nota de migración
-  a Redis en `src/lib/security/rate-limit.ts` si se escala a más de
-  una instancia).
+## Credenciales de prueba en producción
+- Admin: `admin@excoba.local` / `CambiaEstaPassword123!` (cámbiala).
+- Panel admin: `/admin`.
 
-## Comandos ejecutados o requeridos
-No se ejecutó `npm install` ni migraciones reales en este entorno (no
-hay PostgreSQL disponible aquí). Para poner en marcha el proyecto
-completo en tu máquina:
-
-```bash
-npm install
-cp .env.example .env
-npm run prisma:generate
-npm run prisma:migrate:dev
-npm run db:seed
-npm run dev
-```
-
-O, con Docker: `docker compose up --build`.
-
-## Próximo módulo
-Ninguno pendiente de la lista original. Los "próximos pasos naturales"
-quedan listados arriba para cuando quieras continuar el proyecto.
-
-## Actualización — resolución de red y entrega a GitHub
-
-- El bloqueo de red para `prisma generate` en el sandbox de desarrollo
-  (dominio `binaries.prisma.sh` fuera de la lista permitida, y
-  `prisma-engines` no publica esos binarios como releases de GitHub)
-  se resolvió agregando `.github/workflows/ci.yml`: GitHub Actions sí
-  tiene acceso completo a internet, así que ahí `prisma generate`,
-  `typecheck`, `lint`, migraciones contra un PostgreSQL efímero,
-  pruebas y build corren automáticamente en cada push/PR.
-- El repositorio Git local ya está inicializado dentro del proyecto
-  entregado (`git init` + primer commit), con `.gitignore` excluyendo
-  `node_modules` y `.next`. Sólo falta que se agregue tu remoto de
-  GitHub y se haga `git push` (ver README, sección "Subir el proyecto
-  a GitHub").
-- Pendiente inmediato al trabajar localmente por primera vez con
-  PostgreSQL real: generar la migración inicial
-  (`npm run prisma:migrate:dev -- --name init`) y subir la carpeta
-  `prisma/migrations/` resultante — no se pudo generar aquí por la
-  misma razón de red.
+## Variables de entorno configuradas en Vercel (producción)
+`DATABASE_URL`, `SESSION_SECRET`, `APP_URL`, `EMAIL_PROVIDER`,
+`RESEND_API_KEY` (las dos últimas, agregarlas si aún no se hizo — ver
+README, sección "Correo transaccional").
