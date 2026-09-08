@@ -1,5 +1,6 @@
 import { z } from "zod";
 import { db } from "@/db/client";
+import { getRemainingSeconds, parseSimulatorConfig } from "@/server/use-cases/simulator-rules";
 
 export const SaveSimulatorAnswerSchema = z.object({
   attemptId: z.string().min(1),
@@ -22,6 +23,21 @@ export async function saveSimulatorAnswer(input: z.infer<typeof SaveSimulatorAns
   const data = SaveSimulatorAnswerSchema.parse(input);
 
   const attempt = await getActiveSimulatorAttempt(data.attemptId, data.userId);
+  const config = parseSimulatorConfig(attempt.config);
+  if (!config || !config.questionIds.includes(data.questionId)) {
+    throw new SimulatorStateError("La pregunta no pertenece a este simulador.");
+  }
+
+  const question = await db.question.findUnique({
+    where: { id: data.questionId },
+    select: { answers: { select: { id: true } } },
+  });
+  if (
+    !question ||
+    (data.selectedAnswerId && !question.answers.some((a) => a.id === data.selectedAnswerId))
+  ) {
+    throw new SimulatorStateError("La respuesta seleccionada no es válida.");
+  }
 
   await db.attemptAnswer.upsert({
     where: { attemptId_questionId: { attemptId: data.attemptId, questionId: data.questionId } },
@@ -39,24 +55,48 @@ export async function saveSimulatorAnswer(input: z.infer<typeof SaveSimulatorAns
     },
   });
 
-  return { ok: true, remainingSeconds: getRemainingSeconds(attempt) };
+  return { ok: true, remainingSeconds: getRemainingSecondsForAttempt(attempt) };
 }
 
 /** Recupera el estado completo del intento (para reconexión tras desconexión). */
 export async function getSimulatorState(attemptId: string, userId: string) {
   const attempt = await getActiveSimulatorAttempt(attemptId, userId);
+  const config = parseSimulatorConfig(attempt.config);
+  if (!config) throw new SimulatorStateError("La configuración del simulador no es válida.");
 
   const savedAnswers = await db.attemptAnswer.findMany({
     where: { attemptId },
     select: { questionId: true, selectedAnswerId: true, flaggedForReview: true },
   });
+  const questions = await db.question.findMany({
+    where: { id: { in: config.questionIds } },
+    select: {
+      id: true,
+      text: true,
+      subjectId: true,
+      answers: { select: { id: true, text: true } },
+    },
+  });
+  const questionsById = new Map(questions.map((question) => [question.id, question]));
 
   return {
     attemptId: attempt.id,
     status: attempt.status,
-    remainingSeconds: getRemainingSeconds(attempt),
+    remainingSeconds: getRemainingSeconds(attempt.startedAt, config),
+    questions: config.questionIds.flatMap((questionId) => {
+      const question = questionsById.get(questionId);
+      return question ? [question] : [];
+    }),
     savedAnswers,
   };
+}
+
+export async function getLatestSimulatorState(userId: string) {
+  const attempt = await db.attempt.findFirst({
+    where: { userId, type: "SIMULADOR", status: "EN_CURSO" },
+    orderBy: { startedAt: "desc" },
+  });
+  return attempt ? getSimulatorState(attempt.id, userId) : null;
 }
 
 async function getActiveSimulatorAttempt(attemptId: string, userId: string) {
@@ -69,7 +109,7 @@ async function getActiveSimulatorAttempt(attemptId: string, userId: string) {
   // EN_CURSO (el alumno nunca hizo el "submit" final), se marca EXPIRADO
   // en cuanto el servidor detecta la condición, en lugar de depender de un
   // job en segundo plano.
-  if (attempt.status === "EN_CURSO" && getRemainingSeconds(attempt) <= 0) {
+  if (attempt.status === "EN_CURSO" && getRemainingSecondsForAttempt(attempt) <= 0) {
     await db.attempt.update({
       where: { id: attempt.id },
       data: { status: "EXPIRADO", finishedAt: new Date() },
@@ -89,9 +129,7 @@ async function getActiveSimulatorAttempt(attemptId: string, userId: string) {
  * el intento — nunca se confía en un reloj del cliente (ver Módulo 1,
  * sección 14).
  */
-function getRemainingSeconds(attempt: { startedAt: Date; config: unknown }): number {
-  const config = attempt.config as { timeLimitSeconds?: number } | null;
-  const timeLimitSeconds = config?.timeLimitSeconds ?? 0;
-  const elapsedSeconds = Math.floor((Date.now() - attempt.startedAt.getTime()) / 1000);
-  return Math.max(0, timeLimitSeconds - elapsedSeconds);
+function getRemainingSecondsForAttempt(attempt: { startedAt: Date; config: unknown }): number {
+  const config = parseSimulatorConfig(attempt.config);
+  return config ? getRemainingSeconds(attempt.startedAt, config) : 0;
 }

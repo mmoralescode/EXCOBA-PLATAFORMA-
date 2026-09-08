@@ -1,6 +1,7 @@
 import { z } from "zod";
 import { db } from "@/db/client";
 import { recalculateTopicPriority } from "@/server/use-cases/study-priority";
+import { hasSameQuestionSet, getRemainingSeconds, parseSimulatorConfig } from "@/server/use-cases/simulator-rules";
 
 export const SubmitAttemptSchema = z.object({
   attemptId: z.string().min(1),
@@ -15,6 +16,7 @@ export const SubmitAttemptSchema = z.object({
       }),
     )
     .min(1),
+  expectedType: z.enum(["PRACTICA", "SIMULADOR"]).optional(),
 });
 
 export class SubmitAttemptError extends Error {}
@@ -32,8 +34,27 @@ export async function submitAttempt(input: z.infer<typeof SubmitAttemptSchema>) 
   if (!attempt || attempt.userId !== data.userId) {
     throw new SubmitAttemptError("Intento no encontrado o no pertenece al usuario.");
   }
+  if (data.expectedType && attempt.type !== data.expectedType) {
+    throw new SubmitAttemptError("El tipo de intento no coincide con este simulador.");
+  }
   if (attempt.status !== "EN_CURSO") {
     throw new SubmitAttemptError("Este intento ya fue entregado.");
+  }
+
+  if (attempt.type === "SIMULADOR") {
+    const config = parseSimulatorConfig(attempt.config);
+    if (!config || !hasSameQuestionSet(config.questionIds, data.answers.map((a) => a.questionId))) {
+      throw new SubmitAttemptError("La entrega no coincide con las preguntas asignadas.");
+    }
+    if (getRemainingSeconds(attempt.startedAt, config) <= 0) {
+      await db.attempt.update({
+        where: { id: attempt.id },
+        data: { status: "EXPIRADO", finishedAt: new Date() },
+      });
+      throw new SubmitAttemptError("El tiempo del simulador se agotó.");
+    }
+  } else if (new Set(data.answers.map((a) => a.questionId)).size !== data.answers.length) {
+    throw new SubmitAttemptError("La entrega contiene preguntas repetidas.");
   }
 
   const questionIds = data.answers.map((a) => a.questionId);
@@ -42,11 +63,17 @@ export async function submitAttempt(input: z.infer<typeof SubmitAttemptSchema>) 
     include: { answers: true },
   });
   const questionsById = new Map(questions.map((q) => [q.id, q]));
+  if (questions.length !== questionIds.length) {
+    throw new SubmitAttemptError("Una o más preguntas ya no están disponibles.");
+  }
 
   let correctCount = 0;
   const attemptAnswersData = data.answers.map((a) => {
     const question = questionsById.get(a.questionId);
     const correctAnswer = question?.answers.find((ans) => ans.isCorrect);
+    if (a.selectedAnswerId && !question?.answers.some((ans) => ans.id === a.selectedAnswerId)) {
+      throw new SubmitAttemptError("Una respuesta seleccionada no pertenece a su pregunta.");
+    }
     const isCorrect = !!a.selectedAnswerId && a.selectedAnswerId === correctAnswer?.id;
     if (isCorrect) correctCount += 1;
 

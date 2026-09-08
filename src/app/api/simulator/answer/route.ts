@@ -3,6 +3,7 @@ import { ZodError } from "zod";
 import {
   saveSimulatorAnswer,
   getSimulatorState,
+  getLatestSimulatorState,
   SimulatorStateError,
 } from "@/server/use-cases/simulator-state";
 import { requireUser, UnauthorizedError } from "@/lib/authorization";
@@ -23,7 +24,8 @@ export async function GET(request: NextRequest) {
     const user = await requireUser();
     const attemptId = request.nextUrl.searchParams.get("attemptId");
     if (!attemptId) {
-      return NextResponse.json({ error: "attemptId requerido." }, { status: 400 });
+      const state = await getLatestSimulatorState(user.id);
+      return NextResponse.json(state ?? { attempt: null });
     }
     const state = await getSimulatorState(attemptId, user.id);
     return NextResponse.json(state);

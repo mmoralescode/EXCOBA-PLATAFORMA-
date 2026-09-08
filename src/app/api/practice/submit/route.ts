@@ -7,7 +7,7 @@ export async function POST(request: NextRequest) {
   try {
     const user = await requireUser();
     const body = await request.json();
-    const result = await submitAttempt({ ...body, userId: user.id });
+    const result = await submitAttempt({ ...body, userId: user.id, expectedType: "PRACTICA" });
     return NextResponse.json(result);
   } catch (error) {
     if (error instanceof UnauthorizedError) {

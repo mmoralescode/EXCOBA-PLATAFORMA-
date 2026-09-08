@@ -1,6 +1,8 @@
 import { z } from "zod";
 import { db } from "@/db/client";
 
+export class SimulatorStartError extends Error {}
+
 export const StartSimulatorSchema = z.object({
   userId: z.string().min(1),
   questionCount: z.number().int().min(5).max(200).default(40),
@@ -15,6 +17,7 @@ export async function startSimulator(input: z.infer<typeof StartSimulatorSchema>
     where: {
       status: "PUBLICADO",
       deletedAt: null,
+      answers: { some: {} },
       subjectId: data.subjectIds ? { in: data.subjectIds } : undefined,
     },
     select: {
@@ -27,6 +30,11 @@ export async function startSimulator(input: z.infer<typeof StartSimulatorSchema>
   });
 
   const selected = shuffle(candidates).slice(0, data.questionCount);
+  if (selected.length < data.questionCount) {
+    throw new SimulatorStartError(
+      `No hay suficientes preguntas publicadas para iniciar un simulador de ${data.questionCount} preguntas.`,
+    );
+  }
 
   const attempt = await db.attempt.create({
     data: {

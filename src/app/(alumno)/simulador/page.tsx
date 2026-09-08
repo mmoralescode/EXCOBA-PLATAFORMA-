@@ -38,12 +38,14 @@ export default function SimuladorPage() {
   const attemptIdRef = useRef<string | null>(null);
   const questionsRef = useRef<Question[]>([]);
   const selectedRef = useRef<Record<string, string>>({});
+  const submittingRef = useRef(false);
   attemptIdRef.current = attemptId;
   questionsRef.current = questions;
   selectedRef.current = selected;
 
   const submitSimulator = useCallback(async () => {
-    if (!attemptIdRef.current) return;
+    if (!attemptIdRef.current || submittingRef.current) return;
+    submittingRef.current = true;
     setLoading(true);
     try {
       const response = await fetch("/api/simulator/submit", {
@@ -62,14 +64,52 @@ export default function SimuladorPage() {
         setResult(data);
         setQuestions([]);
         setAttemptId(null);
+        setRemainingSeconds(null);
       } else {
         setError(data.error ?? "No se pudo entregar el simulador.");
+        if (response.status === 400 && data.error?.includes("tiempo")) {
+          setQuestions([]);
+          setAttemptId(null);
+          setRemainingSeconds(null);
+        }
       }
     } catch {
       setError("No se pudo conectar con el servidor al entregar.");
     } finally {
+      submittingRef.current = false;
       setLoading(false);
     }
+  }, []);
+
+  useEffect(() => {
+    let cancelled = false;
+    async function recoverSimulator() {
+      try {
+        const response = await fetch("/api/simulator/answer");
+        const data = await response.json();
+        if (!cancelled && response.ok && data.attemptId) {
+          setAttemptId(data.attemptId);
+          setQuestions(data.questions ?? []);
+          setRemainingSeconds(data.remainingSeconds);
+          setSelected(
+            Object.fromEntries(
+              (data.savedAnswers ?? [])
+                .filter((answer: { selectedAnswerId: string | null }) => answer.selectedAnswerId)
+                .map((answer: { questionId: string; selectedAnswerId: string }) => [
+                  answer.questionId,
+                  answer.selectedAnswerId,
+                ]),
+            ),
+          );
+        }
+      } catch {
+        if (!cancelled) setError("No se pudo recuperar el simulador activo.");
+      }
+    }
+    recoverSimulator();
+    return () => {
+      cancelled = true;
+    };
   }, []);
 
   // Cronómetro visual: cuenta hacia abajo localmente cada segundo, pero el
@@ -130,6 +170,7 @@ export default function SimuladorPage() {
       setQuestions(data.questions);
       setRemainingSeconds(data.timeLimitSeconds);
       setSelected({});
+      submittingRef.current = false;
     } catch {
       setError("No se pudo conectar con el servidor.");
     } finally {
@@ -142,13 +183,14 @@ export default function SimuladorPage() {
     if (!attemptId) return;
     // Autosave: se guarda de inmediato en el servidor para poder recuperar
     // el intento si hay una desconexión (ver Módulo 8).
-    fetch("/api/simulator/answer", {
+    const response = await fetch("/api/simulator/answer", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ attemptId, questionId, selectedAnswerId: answerId }),
-    }).catch(() => {
-      /* el siguiente autosave o la entrega final lo reintentan */
-    });
+    }).catch(() => null);
+    if (!response || !response.ok) {
+      setError("No se pudo guardar esta respuesta. Intenta seleccionarla de nuevo.");
+    }
   }
 
   return (
@@ -180,6 +222,9 @@ export default function SimuladorPage() {
 
       {questions.length > 0 && (
         <div className="mt-8 flex flex-col gap-8">
+          <p className="text-sm text-ink/60" role="status">
+            {Object.keys(selected).length} de {questions.length} preguntas respondidas
+          </p>
           {questions.map((q, index) => (
             <fieldset key={q.id} className="rounded-md border border-ink/10 bg-white p-4">
               <legend className="px-1 text-sm text-ink/50">Pregunta {index + 1}</legend>
