@@ -6,9 +6,20 @@ Next.js + TypeScript + PostgreSQL + Prisma, sin dependencia de servicios
 de IA en producción. Puede ejecutarse, mantenerse y desplegarse sin
 acceso a la conversación en la que fue generada.
 
-**Ya está desplegada y funcionando en producción:**
-https://excoba-plataforma.vercel.app — este repositorio es el código
-fuente completo de esa instancia.
+Repositorio personal: https://github.com/Magnusvron/EXCOBA-PLATAFORMA
+
+**Versión de prueba del temario y banco:**
+https://magnusvron.github.io/EXCOBA-PLATAFORMA/
+
+La prueba ofrece 209 temas y 118 ejercicios originales con explicación, sin
+cuentas ni almacenamiento de resultados. Se compila con `npm run preview:build`
+y se publica mediante `.github/workflows/preview-pages.yml` desde `main`.
+La aplicación completa Next.js conserva sus rutas de cuentas y simulador;
+necesita PostgreSQL y un alojamiento compatible para funcionar.
+
+Este proyecto parte de https://github.com/mmoralescode/EXCOBA-PLATAFORMA-.
+La instancia original https://excoba-plataforma.vercel.app pertenece al
+despliegue de ese repositorio y no se actualiza desde esta copia personal.
 
 ## Estado del proyecto
 

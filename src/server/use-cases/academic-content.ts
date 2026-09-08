@@ -143,7 +143,7 @@ export async function getPublishedCurriculum() {
           lessons: {
             where: { status: "PUBLICADO", deletedAt: null },
             orderBy: { order: "asc" },
-            select: { id: true, title: true, order: true },
+            select: { id: true, title: true, content: true, order: true },
           },
         },
       },

@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import Link from "next/link";
 
 interface Subject {
   id: string;
@@ -106,6 +107,12 @@ export default function PracticaPage() {
   return (
     <main className="mx-auto max-w-2xl px-6 py-16">
       <h1 className="font-display text-3xl text-pizarron">Práctica</h1>
+      <Link
+        href="/banco"
+        className="mt-4 block rounded-lg border border-pizarron/20 bg-white p-4 text-pizarron underline"
+      >
+        Nuevo banco 2026-2: ejercicios por tema con respuestas explicadas
+      </Link>
 
       {!attemptId && !result && (
         <div className="mt-8 flex flex-col gap-4">
@@ -176,10 +183,7 @@ export default function PracticaPage() {
           <p className="mt-1 text-sm text-ink/70">
             {result.correctCount} de {result.totalCount} respuestas correctas.
           </p>
-          <button
-            onClick={() => setResult(null)}
-            className="mt-4 text-sm text-pizarron underline"
-          >
+          <button onClick={() => setResult(null)} className="mt-4 text-sm text-pizarron underline">
             Practicar de nuevo
           </button>
         </div>

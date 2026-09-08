@@ -8,6 +8,7 @@ import type { Config } from "tailwindcss";
  */
 const config: Config = {
   content: [
+    "./src/preview/**/*.{ts,tsx}",
     "./src/app/**/*.{ts,tsx}",
     "./src/components/**/*.{ts,tsx}",
     "./src/modules/**/*.{ts,tsx}",

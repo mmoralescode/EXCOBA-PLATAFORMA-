@@ -8,6 +8,7 @@ next-env.d.ts
 
 # Producción
 /build
+/preview-dist/
 
 # Variables de entorno (nunca subir valores reales)
 .env
