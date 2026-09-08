@@ -14,7 +14,7 @@ Las preguntas son nuevas adaptaciones de habilidades a opción múltiple. No son
 
 ## Importación a la base existente
 
-Para utilizar también el banco en la práctica registrada y el simulador, configurar `DATABASE_URL` y `CONTENT_AUTHOR_EMAIL` con el correo de un editor académico o superadministrador activo ya existente, y ejecutar:
+Para utilizar también el banco en la práctica registrada y el simulador, configurar `DATABASE_URL` y, opcionalmente, `CONTENT_AUTHOR_EMAIL` con el correo de un editor académico o superadministrador activo ya existente, y ejecutar:
 
 ```sh
 npm run content:import
@@ -22,13 +22,13 @@ npm run content:import
 
 No necesita cambios al esquema Prisma. Importa convocatoria, áreas, materias, temas y preguntas dentro de una transacción. Usa identificadores propios y versionados; al repetir no crea duplicados ni modifica respuestas usadas por intentos previos. No crea usuarios, licencias ni contraseñas. Archiva únicamente los siete enunciados exactos de ejemplo del seed anterior, preservando su historial. No sustituye preguntas ni materias creadas por otros editores. Para corregir un reactivo ya importado, publicar una nueva versión con nuevo ID y archivar la anterior mediante el flujo académico.
 
-La importación **no se ha ejecutado en una base local o de producción**: no hay una conexión de aplicación configurada en este entorno. El código y el catálogo están listos en el checkout local; esta tarea no publica un despliegue ni cambia la base remota. El seed antiguo es exclusivamente de desarrollo; no ejecutar `db:seed` en producción para cargar este contenido.
+Si `CONTENT_AUTHOR_EMAIL` no está definido, el importador selecciona el primer editor académico o superadministrador activo. El build de Vercel ejecuta automáticamente `prisma migrate deploy`, `content:import` y `next build`, por lo que el simulador registrado usa las preguntas reales y archiva los placeholders del seed. El seed antiguo es exclusivamente de desarrollo; no ejecutar `db:seed` en producción para cargar este contenido.
 
 ## Validación y límites
 
 Pruebas automáticas de integridad del catálogo, correspondencias, unicidad, opciones, filtros, barajado y calificación formativa (incluidas omitidas). Los 48 cálculos parametrizados se verifican con operaciones independientes, sustitución o identidades equivalentes. Los ejercicios conceptuales y los cálculos individuales se revisaron durante la autoría. No se trata de una certificación pedagógica externa.
 
-La ampliación no modifica las reglas del simulador ni corrige los problemas de validación de intentos, licencias o distribución por carrera documentados en la auditoría anterior. Tampoco añade lecciones completas a los 209 temas ni reproduce las interacciones de arrastrar, ordenar o capturar números del demo. El nuevo banco es una primera base de práctica con explicación.
+La ampliación no añade lecciones completas a los 209 temas ni reproduce las interacciones de arrastrar, ordenar o capturar números del demo. El nuevo banco contiene 118 ejercicios originales con explicación, distribuidos en 71 temas con evidencia parcial.
 
 ## Fuentes de contraste académico
 

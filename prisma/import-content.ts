@@ -6,20 +6,27 @@ const prefix = "uaq-2026-2";
 
 async function main() {
   const email = process.env.CONTENT_AUTHOR_EMAIL?.trim().toLowerCase();
-  if (!email)
-    throw new Error(
-      "Define CONTENT_AUTHOR_EMAIL con el correo de un editor o administrador existente.",
-    );
-  const author = await db.user.findUnique({
-    where: { email },
-    include: { roles: { include: { role: true } } },
-  });
+  const author = email
+    ? await db.user.findUnique({
+        where: { email },
+        include: { roles: { include: { role: true } } },
+      })
+    : await db.user.findFirst({
+        where: {
+          status: "ACTIVO",
+          roles: { some: { role: { name: { in: ["SUPER_ADMIN", "EDITOR_ACADEMICO"] } } } },
+        },
+        orderBy: { createdAt: "asc" },
+        include: { roles: { include: { role: true } } },
+      });
   if (
     !author ||
     author.status !== "ACTIVO" ||
     !author.roles.some(({ role }) => ["SUPER_ADMIN", "EDITOR_ACADEMICO"].includes(role.name))
   ) {
-    throw new Error("El autor debe ser un editor o administrador activo existente.");
+    throw new Error(
+      "No existe un editor académico o administrador activo para atribuir el contenido.",
+    );
   }
   await db.$transaction(
     async (tx) => {
