@@ -163,6 +163,9 @@ export default function ActivarPage() {
       <Link href="/login" className="mt-6 text-sm text-ink/60 hover:text-pizarron">
         Ya tengo cuenta — iniciar sesión
       </Link>
+      <Link href="/temario" className="mt-3 text-sm text-pizarron underline hover:text-acento">
+        Explorar el temario completo y los ejercicios
+      </Link>
     </main>
   );
 }
