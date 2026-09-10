@@ -1,13 +1,18 @@
 import { z } from "zod";
 import { db } from "@/db/client";
-import { getCareer, officialTopicIds, prioritizeQuestions } from "@/content/study-plan";
+import {
+  careerTopicIds,
+  getCareer,
+  officialTopicIds,
+  selectPracticeQuestions,
+} from "@/content/study-plan";
 
 export const StartPracticeSchema = z.object({
   userId: z.string().min(1),
   careerId: z.string().refine((id) => !!getCareer(id), "Selecciona una carrera del Anexo I."),
   subjectId: z.string().min(1).optional(),
   topicId: z.string().min(1).optional(),
-  scope: z.enum(["official", "extra", "all"]).default("all"),
+  scope: z.enum(["career", "official", "extra", "all"]).default("career"),
   difficulty: z.enum(["BAJA", "MEDIA", "ALTA"]).optional(),
   questionCount: z.number().int().min(1).max(50).default(10),
 });
@@ -24,11 +29,13 @@ export async function startPractice(input: z.input<typeof StartPracticeSchema>) 
         difficulty: data.difficulty,
         AND: [
           data.topicId ? { topicId: data.topicId } : {},
-          data.scope === "official"
-            ? { topicId: { in: officialTopicIds } }
-            : data.scope === "extra"
-              ? { topicId: { notIn: officialTopicIds } }
-              : {},
+          data.scope === "career"
+            ? { topicId: { in: careerTopicIds(career) } }
+            : data.scope === "official"
+              ? { topicId: { in: officialTopicIds } }
+              : data.scope === "extra"
+                ? { topicId: { notIn: officialTopicIds } }
+                : {},
         ],
       },
       select: {
@@ -49,11 +56,12 @@ export async function startPractice(input: z.input<typeof StartPracticeSchema>) 
       select: { questionId: true },
     }),
   ]);
-  const selected = prioritizeQuestions(
+  const selected = selectPracticeQuestions(
     shuffle(candidates),
     career,
     new Set(answered.map((a) => a.questionId)),
-  ).slice(0, data.questionCount);
+    data.questionCount,
+  );
   if (!selected.length) return { attemptId: null, questions: [] };
   const attempt = await db.attempt.create({
     data: {

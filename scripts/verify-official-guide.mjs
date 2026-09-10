@@ -3,49 +3,79 @@ import { createHash } from "node:crypto";
 import { readFileSync } from "node:fs";
 import assert from "node:assert/strict";
 
-const pdf = process.argv[2];
-if (!pdf) throw new Error("Uso: node scripts/verify-official-guide.mjs <PDF oficial>");
-const raw = execFileSync("pdftotext", ["-layout", pdf, "-"], {
-  encoding: "utf8",
-  maxBuffer: 5_000_000,
-});
-const catalog = JSON.parse(
-  readFileSync(new URL("../src/content/curriculum.json", import.meta.url), "utf8"),
-);
-const careers = JSON.parse(
-  readFileSync(new URL("../src/content/careers.json", import.meta.url), "utf8"),
-);
-assert.equal(
-  createHash("sha256").update(readFileSync(pdf)).digest("hex"),
-  careers.sha256,
-  "El PDF no corresponde a la fuente registrada.",
-);
-const headings = [...raw.matchAll(/^(\d\.\d+\.\d+(?:\.\d+)?)\.\s+/gm)].map((m) => m[1]);
-const leaves = headings.filter((code) => !headings.some((other) => other.startsWith(code + ".")));
-assert.deepEqual(
-  [...leaves].sort(),
-  catalog.topics.map((t) => t.id).sort(),
-  "Faltan temas o sobran códigos.",
-);
-const appendix = raw.slice(raw.indexOf("ANEXO I. Programas educativos de la UAQ 2026-1"));
-const names = appendix
-  .split("\n")
-  .map((line) => line.split(/\s{2,}/)[0].trim())
-  .filter(
-    (line) =>
-      line &&
-      !/NOMBRE DE|ANEXO|Página|P á g|CRÉDITOS|El demo|Visita|https?:|Métrica|^\f/.test(line),
+const pdfs = process.argv.slice(2);
+if (!pdfs.length)
+  throw new Error("Uso: node scripts/verify-official-guide.mjs <PDF oficial> [otro PDF...]");
+const readJson = (path) => JSON.parse(readFileSync(new URL(path, import.meta.url), "utf8"));
+const curriculum = readJson("../src/content/curriculum.json");
+const catalog = readJson("../src/content/careers.json");
+const provenance = readJson("../src/content/career-sources.json");
+const normalize = (text) => text.normalize("NFC").replace(/\s+/g, " ").trim();
+
+assert.equal(catalog.careers.length, 122);
+assert.equal(new Set(catalog.careers.map((c) => c.id)).size, 122);
+assert.deepEqual(Object.keys(provenance.careers).sort(), catalog.careers.map((c) => c.id).sort());
+for (const career of catalog.careers) {
+  const evidence = provenance.careers[career.id];
+  assert.ok(provenance.sources[evidence.sourceId], `Fuente desconocida: ${career.id}`);
+  assert.equal(new Set(career.subjectIds).size, 3);
+  assert.deepEqual(career.subjectIds, provenance.groups[evidence.groupId].subjectIds, career.name);
+  assert.ok(
+    career.subjectIds.every(
+      (id) => id.startsWith("3.") && curriculum.subjects.some((s) => s.id === id),
+    ),
   );
-const extractedNames = names.filter(
-  (line) => /\(.*\)$/.test(line) || line === "INGENIERO EN AGROBIOTECNOLOGÍA",
-);
-assert.deepEqual(
-  extractedNames,
-  careers.careers.map((c) => c.name),
-  "Revisar carreras faltantes o nombres.",
-);
-assert.equal(leaves.length, 209);
-assert.equal(extractedNames.length, 49);
+}
+
+for (const pdf of pdfs) {
+  const hash = createHash("sha256").update(readFileSync(pdf)).digest("hex");
+  const sourceEntry = Object.entries(provenance.sources).find(
+    ([, source]) => source.sha256 === hash,
+  );
+  assert.ok(sourceEntry, "El PDF no corresponde a ninguna fuente registrada.");
+  const [sourceId, source] = sourceEntry;
+  const raw = execFileSync("pdftotext", ["-layout", pdf, "-"], {
+    encoding: "utf8",
+    maxBuffer: 5_000_000,
+  });
+  const pages = raw.split("\f");
+  const records = Object.values(provenance.careers)
+    .flatMap((record) => [record, ...(record.previousSource ? [record.previousSource] : [])])
+    .filter((record) => record.sourceId === sourceId);
+  assert.equal(records.length, source.optionCount ?? source.usedOptionCount);
+  for (const record of records) {
+    const page = pages[record.page + source.pdfPageOffset - 1];
+    assert.ok(
+      page && normalize(page).includes(normalize(record.sourceName)),
+      `Carrera no encontrada en página ${record.page}: ${record.sourceName}`,
+    );
+  }
+  console.log(
+    `${sourceId}: ${records.length} opciones verificadas contra el PDF, SHA256 y página de procedencia correctos.`,
+  );
+
+  if (hash === curriculum.sha256) {
+    const headings = [...raw.matchAll(/^(\d\.\d+\.\d+(?:\.\d+)?)\.\s+/gm)].map((m) => m[1]);
+    const leaves = headings.filter(
+      (code) => !headings.some((other) => other.startsWith(code + ".")),
+    );
+    assert.deepEqual(
+      [...leaves].sort(),
+      curriculum.topics.map((topic) => topic.id).sort(),
+      "Faltan temas o sobran códigos.",
+    );
+    const clean = normalize(raw.replace(/^\s*Página\s*\|\s*\d+\s*$/gm, ""));
+    for (const topic of curriculum.topics) {
+      assert.ok(
+        clean.includes(normalize(topic.name)),
+        `Texto de tema diferente al PDF: ${topic.id}`,
+      );
+    }
+    console.log(
+      `Temario: ${leaves.length}/209 temas y sus descripciones, ${curriculum.subjects.length}/14 asignaturas verificados.`,
+    );
+  }
+}
 console.log(
-  "PDF verificado: 209/209 temas, 14 asignaturas, 49/49 carreras. Mapeos de áreas cotejados visualmente en páginas 17 y 18.",
+  "Los grupos de tres áreas se cotejaron visualmente; ver docs/uaq-career-mapping-2026.md.",
 );

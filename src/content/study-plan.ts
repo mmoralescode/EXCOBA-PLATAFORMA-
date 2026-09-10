@@ -19,6 +19,25 @@ const topicMap = new Map(officialTopics.map((topic) => [topicDbId(topic.id), top
 export function officialTopic(topicId: string) {
   return topicMap.get(topicId);
 }
+/** Primary and secondary education are assessed for every undergraduate program. */
+export function isCommonSubject(subjectId: string) {
+  return officialSubjects.some(
+    (subject) =>
+      subject.id === subjectId && (subject.id.startsWith("1.") || subject.id.startsWith("2.")),
+  );
+}
+
+/** The student's exam comprises the common core plus their three specific areas. */
+export function isCareerSubject(subjectId: string, career: Career) {
+  return isCommonSubject(subjectId) || career.subjectIds.includes(subjectId);
+}
+
+export function careerTopicIds(career: Career) {
+  return officialTopics
+    .filter((topic) => isCareerSubject(topic.subjectId, career))
+    .map((topic) => topicDbId(topic.id));
+}
+
 export function priorityForTopic(topicId: string, career: Career | null) {
   const topic = officialTopic(topicId);
   return !topic ? 2 : career?.subjectIds.includes(topic.subjectId) ? 0 : 1;
@@ -48,4 +67,20 @@ export function prioritizeQuestions<T extends { id: string; topicId: string }>(
       priorityForTopic(a.topicId, career) - priorityForTopic(b.topicId, career) ||
       Number(answeredIds.has(a.id)) - Number(answeredIds.has(b.id)),
   );
+}
+
+/** Visit unseen topics before repeating an exhausted tier. Keep the career-first
+ * order inside the chosen session, without starving common or optional areas. */
+export function selectPracticeQuestions<T extends { id: string; topicId: string }>(
+  items: T[],
+  career: Career,
+  answeredIds: ReadonlySet<string>,
+  count: number,
+) {
+  const ordered = prioritizeQuestions(items, career, answeredIds);
+  const selected = [
+    ...ordered.filter((question) => !answeredIds.has(question.id)),
+    ...ordered.filter((question) => answeredIds.has(question.id)),
+  ].slice(0, count);
+  return prioritizeQuestions(selected, career, answeredIds);
 }

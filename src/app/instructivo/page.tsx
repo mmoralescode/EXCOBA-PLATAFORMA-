@@ -8,12 +8,13 @@ export default function InstructivoPage() {
         ← Inicio
       </Link>
       <p className="mt-8 font-display text-sm uppercase tracking-widest text-acento">
-        EXCOBA · UAQ 2026-1
+        EXCOBA · UAQ · Guía de estudio
       </p>
       <h1 className="mt-2 font-display text-3xl text-pizarron">Tu instructivo, por temas</h1>
       <p className="mt-3 leading-7 text-ink/75">
-        Incluye todos los temas del instructivo oficial EXCOBA: 209 apartados de 14 asignaturas,
-        organizados en primaria, secundaria y bachillerato.
+        Incluye los 209 apartados de las 14 asignaturas del instructivo oficial EXCOBA UAQ 2026-2,
+        organizados en primaria, secundaria y bachillerato. Al elegir tu carrera verás primero el
+        plan que te corresponde; puedes consultar el temario completo cuando quieras.
       </p>
       <details className="mt-6 rounded-xl border border-ink/10 bg-white p-4">
         <summary className="cursor-pointer font-medium text-pizarron">
@@ -43,9 +44,10 @@ export default function InstructivoPage() {
       </details>
       <CurriculumBrowser />
       <p className="mt-8 text-xs leading-5 text-ink/50">
-        Fuente: instructivo EXCOBA-UAQ Licenciatura adjunto, guía temática (páginas 4–16) y Anexo I
-        UAQ 2026-1 (páginas 17–18). El índice del PDF conserva una referencia a 2025-1; la tabla del
-        Anexo I está titulada 2026-1.
+        Temario: instructivo EXCOBA-UAQ Licenciatura 2026-2, páginas 4–16. La selección de carreras
+        reúne el Anexo I de 2026-2 y referencias de 2026-1 y 2025-2 identificadas en el selector. La
+        oferta y los periodos de ingreso dependen de cada facultad: pertenecer al catálogo no
+        significa que haya una convocatoria abierta.
       </p>
       <Link href="/" className="mt-6 inline-block text-sm text-pizarron underline">
         Elegir carrera y continuar →

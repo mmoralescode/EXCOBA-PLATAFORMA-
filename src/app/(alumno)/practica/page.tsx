@@ -1,8 +1,9 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useState } from "react";
-import { CareerSelector, useCareer } from "@/components/career-selector";
+import { useEffect, useRef, useState } from "react";
+import { CareerSelector, CareerSourceNote, useCareer } from "@/components/career-selector";
+import { isCareerSubject, isCommonSubject } from "@/content/study-plan";
 import type { StudySubject } from "@/content/study-types";
 
 type Subject = Omit<StudySubject, "topics">;
@@ -12,7 +13,8 @@ type Result = { score: number; correctCount: number; totalCount: number };
 export default function PracticaPage() {
   const { career, choose, ready } = useCareer();
   const [subjects, setSubjects] = useState<Subject[]>([]);
-  const [mode, setMode] = useState<"area" | "all" | null>(null);
+  const [mode, setMode] = useState<"career" | "all">("career");
+  const initializedSelection = useRef(false);
   const [subjectKey, setSubjectKey] = useState("");
   const [attemptId, setAttemptId] = useState<string | null>(null);
   const [questions, setQuestions] = useState<Question[]>([]);
@@ -33,27 +35,46 @@ export default function PracticaPage() {
         return response.json();
       })
       .then((data: { subjects: Subject[] }) => {
-        setSubjects(data.subjects);
-        const params = new URLSearchParams(window.location.search);
-        const subject = data.subjects.find(
-          (s) => s.id === params.get("subject") && s.scope === (params.get("scope") ?? "official"),
-        );
-        if (subject) {
-          setSubjectKey(subject.key);
-          setMode("area");
-        }
+        if (!controller.signal.aborted) setSubjects(data.subjects);
       })
       .catch((err: Error) => {
-        if (err.name !== "AbortError") setError(err.message);
+        if (!controller.signal.aborted && err.name !== "AbortError") setError(err.message);
       })
-      .finally(() => setLoadingSubjects(false));
+      .finally(() => {
+        if (!controller.signal.aborted) setLoadingSubjects(false);
+      });
     return () => controller.abort();
   }, []);
+
+  useEffect(() => {
+    if (!ready || !career || loadingSubjects || initializedSelection.current) return;
+    initializedSelection.current = true;
+    const params = new URLSearchParams(window.location.search);
+    const subject = subjects.find(
+      (s) => s.id === params.get("subject") && s.scope === (params.get("scope") ?? "official"),
+    );
+    if (subject) {
+      setSubjectKey(subject.key);
+      setMode(
+        subject.scope === "extra" || !isCareerSubject(subject.officialId ?? "", career)
+          ? "all"
+          : "career",
+      );
+    } else if (params.get("scope") === "all") {
+      setMode("all");
+    }
+  }, [ready, career, loadingSubjects, subjects]);
 
   async function start() {
     if (!career) return;
     const subject = subjects.find((s) => s.key === subjectKey);
-    if (mode === "area" && !subject) return;
+    if (subjectKey && (!subject || !subject.questionCount)) return;
+    if (
+      subject &&
+      mode === "career" &&
+      (subject.scope !== "official" || !isCareerSubject(subject.officialId ?? "", career))
+    )
+      return;
     setLoading(true);
     setError("");
     try {
@@ -63,8 +84,8 @@ export default function PracticaPage() {
         body: JSON.stringify({
           careerId: career.id,
           questionCount: 10,
-          subjectId: mode === "area" ? subject?.id : undefined,
-          scope: mode === "area" ? subject?.scope : "all",
+          subjectId: subject?.id,
+          scope: subject ? subject.scope : mode,
         }),
       });
       const data = await response.json();
@@ -113,18 +134,31 @@ export default function PracticaPage() {
   const q = questions[index];
   const sections = [
     {
-      name: "Prioridad para tu carrera",
+      name: "Tus tres áreas de bachillerato",
       items: subjects.filter(
         (s) => s.scope === "official" && career?.subjectIds.includes(s.officialId ?? ""),
       ),
     },
     {
-      name: "Resto de temas EXCOBA",
-      items: subjects.filter(
-        (s) => s.scope === "official" && !career?.subjectIds.includes(s.officialId ?? ""),
-      ),
+      name: "Base común: primaria y secundaria",
+      items: subjects.filter((s) => s.scope === "official" && isCommonSubject(s.officialId ?? "")),
     },
-    { name: "Contenido complementario", items: subjects.filter((s) => s.scope === "extra") },
+    {
+      name: "Otras áreas EXCOBA",
+      items:
+        mode === "all"
+          ? subjects.filter(
+              (s) =>
+                s.scope === "official" &&
+                !isCommonSubject(s.officialId ?? "") &&
+                !career?.subjectIds.includes(s.officialId ?? ""),
+            )
+          : [],
+    },
+    {
+      name: "Contenido complementario",
+      items: mode === "all" ? subjects.filter((s) => s.scope === "extra") : [],
+    },
   ];
   return (
     <main className="mx-auto max-w-2xl px-6 py-12">
@@ -147,13 +181,14 @@ export default function PracticaPage() {
                     value={career.id}
                     onChange={(id) => {
                       choose(id);
-                      setMode(null);
+                      setMode("career");
                       setSubjectKey("");
                     }}
                   />
                 </div>
               </details>
-              <h2 className="font-display text-xl text-pizarron">¿Qué área quieres comenzar?</h2>
+              <CareerSourceNote careerId={career.id} historicalOnly />
+              <h2 className="font-display text-xl text-pizarron">¿Qué quieres practicar?</h2>
               <div
                 className="grid gap-3 sm:grid-cols-2"
                 role="group"
@@ -161,75 +196,89 @@ export default function PracticaPage() {
               >
                 <button
                   type="button"
-                  aria-pressed={mode === "area"}
-                  onClick={() => setMode("area")}
-                  className={`rounded-xl border p-4 text-left ${mode === "area" ? "border-pizarron bg-pizarron text-white" : "border-ink/15 bg-white text-pizarron"}`}
+                  aria-pressed={mode === "career"}
+                  onClick={() => {
+                    setMode("career");
+                    setSubjectKey("");
+                  }}
+                  className={`rounded-xl border p-4 text-left ${mode === "career" ? "border-pizarron bg-pizarron text-white" : "border-ink/15 bg-white text-pizarron"}`}
                 >
-                  Elegir un área
+                  <span className="block font-medium">Temas de mi carrera</span>
+                  <span className="mt-1 block text-xs leading-5 opacity-80">
+                    Tus tres áreas de bachillerato + primaria y secundaria.
+                  </span>
                 </button>
                 <button
                   type="button"
                   aria-pressed={mode === "all"}
-                  onClick={() => setMode("all")}
+                  onClick={() => {
+                    setMode("all");
+                    setSubjectKey("");
+                  }}
                   className={`rounded-xl border p-4 text-left ${mode === "all" ? "border-pizarron bg-pizarron text-white" : "border-ink/15 bg-white text-pizarron"}`}
                 >
-                  Practicar todos los temas
+                  <span className="block font-medium">Todos los temas</span>
+                  <span className="mt-1 block text-xs leading-5 opacity-80">
+                    El temario completo y el contenido complementario.
+                  </span>
                 </button>
               </div>
-              {mode === "area" && (
-                <label className="block text-sm text-ink/70">
-                  Asignatura
-                  <select
-                    value={subjectKey}
-                    onChange={(event) => setSubjectKey(event.target.value)}
-                    disabled={loadingSubjects}
-                    className="mt-2 w-full rounded-lg border border-ink/20 bg-white p-3"
-                  >
-                    <option value="">
-                      {loadingSubjects ? "Cargando áreas…" : "Selecciona un área"}
-                    </option>
-                    {sections
-                      .filter((s) => s.items.length > 0)
-                      .map((section) => (
-                        <optgroup key={section.name} label={section.name}>
-                          {section.items.map((subject) => (
-                            <option
-                              key={subject.key}
-                              value={subject.key}
-                              disabled={!subject.questionCount}
-                            >
-                              {subject.name}
-                              {!subject.questionCount ? " · Práctica pendiente" : ""}
-                            </option>
-                          ))}
-                        </optgroup>
-                      ))}
-                  </select>
-                </label>
-              )}
-              {mode && (
-                <div className="flex items-center justify-between gap-4 rounded-xl bg-white p-4">
-                  <p className="text-sm leading-6 text-ink/70">
-                    Hasta 10 preguntas por sesión.
-                    {mode === "all" &&
-                      " Primero tus áreas EXCOBA, luego el resto del temario y al final los extras."}
-                  </p>
-                  <button
-                    type="button"
-                    onClick={start}
-                    disabled={
-                      loading ||
-                      loadingSubjects ||
-                      (mode === "area" &&
-                        !subjects.some((s) => s.key === subjectKey && s.questionCount > 0))
-                    }
-                    aria-label="Iniciar práctica"
-                    className="grid h-12 w-12 shrink-0 place-items-center rounded-full bg-pizarron text-white disabled:opacity-40"
-                  >
-                    <span aria-hidden="true">{loading ? "…" : "▶"}</span>
-                  </button>
-                </div>
-              )}
+              <label className="block text-sm text-ink/70">
+                ¿Qué área quieres comenzar? <span className="text-ink/50">Opcional</span>
+                <select
+                  value={subjectKey}
+                  onChange={(event) => setSubjectKey(event.target.value)}
+                  disabled={loadingSubjects}
+                  className="mt-2 w-full rounded-lg border border-ink/20 bg-white p-3"
+                >
+                  <option value="">
+                    {loadingSubjects
+                      ? "Cargando áreas…"
+                      : mode === "career"
+                        ? "Todas las áreas de mi plan"
+                        : "Todos los temas disponibles"}
+                  </option>
+                  {sections
+                    .filter((s) => s.items.length > 0)
+                    .map((section) => (
+                      <optgroup key={section.name} label={section.name}>
+                        {section.items.map((subject) => (
+                          <option
+                            key={subject.key}
+                            value={subject.key}
+                            disabled={!subject.questionCount}
+                          >
+                            {subject.name}
+                            {!subject.questionCount ? " · Práctica pendiente" : ""}
+                          </option>
+                        ))}
+                      </optgroup>
+                    ))}
+                </select>
+              </label>
+              <div className="flex items-center justify-between gap-4 rounded-xl bg-white p-4">
+                <p className="text-sm leading-6 text-ink/70">
+                  Hasta 10 preguntas por sesión.
+                  {!subjectKey &&
+                    (mode === "career"
+                      ? " Solo tus tres áreas de bachillerato y la base común de primaria y secundaria."
+                      : " Primero tus áreas EXCOBA, luego el resto del temario y al final los extras.")}
+                </p>
+                <button
+                  type="button"
+                  onClick={start}
+                  disabled={
+                    loading ||
+                    loadingSubjects ||
+                    (Boolean(subjectKey) &&
+                      !subjects.some((s) => s.key === subjectKey && s.questionCount > 0))
+                  }
+                  aria-label="Iniciar práctica"
+                  className="grid h-12 w-12 shrink-0 place-items-center rounded-full bg-pizarron text-white disabled:opacity-40"
+                >
+                  <span aria-hidden="true">{loading ? "…" : "▶"}</span>
+                </button>
+              </div>
             </>
           )}
         </div>
@@ -315,7 +364,8 @@ export default function PracticaPage() {
               aria-label="Preparar otra práctica"
               onClick={() => {
                 setResult(null);
-                setMode(null);
+                setMode("career");
+                setSubjectKey("");
                 setError("");
               }}
               className="grid h-11 w-11 place-items-center rounded-full bg-pizarron text-white"
