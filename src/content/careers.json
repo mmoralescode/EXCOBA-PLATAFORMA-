@@ -1,0 +1,252 @@
+{
+  "source": "Anexo I. Programas educativos de la UAQ 2026-1",
+  "pages": [17, 18],
+  "sha256": "8b42cf9d7da651810ddc87f8bb7b866368a737750f15c64c56e23d68f03d3652",
+  "careers": [
+    {
+      "id": "uaq-2026-1-01",
+      "name": "MEDICINA GENERAL (QUERÉTARO)",
+      "subjectIds": ["3.1", "3.4", "3.6"]
+    },
+    {
+      "id": "uaq-2026-1-02",
+      "name": "ODONTOLOGÍA (QUERÉTARO)",
+      "subjectIds": ["3.1", "3.4", "3.6"]
+    },
+    {
+      "id": "uaq-2026-1-03",
+      "name": "TSU EN MANEJO DE ALIMENTOS Y CULTURA DEL VINO (QUERÉTARO)",
+      "subjectIds": ["3.1", "3.4", "3.6"]
+    },
+    {
+      "id": "uaq-2026-1-04",
+      "name": "BIOLOGÍA (QUERÉTARO)",
+      "subjectIds": ["3.3", "3.4", "3.6"]
+    },
+    {
+      "id": "uaq-2026-1-05",
+      "name": "EDUCACIÓN FÍSICA Y CIENCIAS DEL DEPORTE (QUERÉTARO)",
+      "subjectIds": ["3.3", "3.4", "3.6"]
+    },
+    {
+      "id": "uaq-2026-1-06",
+      "name": "ENFERMERÍA (LICENCIATURA) (QUERÉTARO)",
+      "subjectIds": ["3.3", "3.4", "3.6"]
+    },
+    {
+      "id": "uaq-2026-1-07",
+      "name": "ENFERMERÍA (LICENCIATURA) (SAN JUAN DEL RÍO)",
+      "subjectIds": ["3.3", "3.4", "3.6"]
+    },
+    {
+      "id": "uaq-2026-1-08",
+      "name": "ENFERMERÍA POR NIVELACIÓN (QUERÉTARO)",
+      "subjectIds": ["3.3", "3.4", "3.6"]
+    },
+    {
+      "id": "uaq-2026-1-09",
+      "name": "FISIOTERAPIA (QUERÉTARO)",
+      "subjectIds": ["3.3", "3.4", "3.6"]
+    },
+    {
+      "id": "uaq-2026-1-10",
+      "name": "MEDICINA VETERINARIA Y ZOOTECNIA (QUERÉTARO)",
+      "subjectIds": ["3.3", "3.4", "3.6"]
+    },
+    {
+      "id": "uaq-2026-1-11",
+      "name": "NUTRICIÓN (QUERÉTARO)",
+      "subjectIds": ["3.3", "3.4", "3.6"]
+    },
+    {
+      "id": "uaq-2026-1-12",
+      "name": "INGENIERO EN AGROBIOTECNOLOGÍA",
+      "subjectIds": ["3.2", "3.3", "3.6"]
+    },
+    {
+      "id": "uaq-2026-1-13",
+      "name": "INGENIERÍA DE SOFTWARE (QUERÉTARO)",
+      "subjectIds": ["3.2", "3.3", "3.6"]
+    },
+    {
+      "id": "uaq-2026-1-14",
+      "name": "INGENIERÍA EN TECNOLOGÍAS INTELIGENTES INDUSTRIALES (SAN JUAN DEL RÍO)",
+      "subjectIds": ["3.2", "3.3", "3.6"]
+    },
+    {
+      "id": "uaq-2026-1-15",
+      "name": "QUÍMICO FARMACÉUTICO BIÓLOGO (QUERÉTARO)",
+      "subjectIds": ["3.2", "3.3", "3.6"]
+    },
+    {
+      "id": "uaq-2026-1-16",
+      "name": "ANIMACIÓN DIGITAL Y MEDIOS INTERACTIVOS (QUERÉTARO)",
+      "subjectIds": ["3.2", "3.3", "3.5"]
+    },
+    {
+      "id": "uaq-2026-1-17",
+      "name": "ARQUITECTURA (QUERÉTARO)",
+      "subjectIds": ["3.2", "3.3", "3.5"]
+    },
+    {
+      "id": "uaq-2026-1-18",
+      "name": "ARQUITECTURA (TEQUISQUIAPAN)",
+      "subjectIds": ["3.2", "3.3", "3.5"]
+    },
+    {
+      "id": "uaq-2026-1-19",
+      "name": "DISEÑO INDUSTRIAL (QUERÉTARO)",
+      "subjectIds": ["3.2", "3.3", "3.5"]
+    },
+    {
+      "id": "uaq-2026-1-20",
+      "name": "DISEÑO INDUSTRIAL (TEQUISQUIAPAN)",
+      "subjectIds": ["3.2", "3.3", "3.5"]
+    },
+    {
+      "id": "uaq-2026-1-21",
+      "name": "INGENIERÍA AGROINDUSTRIAL (AMAZCALA)",
+      "subjectIds": ["3.2", "3.3", "3.5"]
+    },
+    {
+      "id": "uaq-2026-1-22",
+      "name": "INGENIERÍA AGROINDUSTRIAL (AMEALCO)",
+      "subjectIds": ["3.2", "3.3", "3.5"]
+    },
+    {
+      "id": "uaq-2026-1-23",
+      "name": "INGENIERÍA AGROINDUSTRIAL (CONCÁ)",
+      "subjectIds": ["3.2", "3.3", "3.5"]
+    },
+    {
+      "id": "uaq-2026-1-24",
+      "name": "INGENIERÍA BIOMÉDICA (QUERÉTARO-AEROPUERTO)",
+      "subjectIds": ["3.2", "3.3", "3.5"]
+    },
+    {
+      "id": "uaq-2026-1-25",
+      "name": "INGENIERÍA CIVIL (QUERÉTARO)",
+      "subjectIds": ["3.2", "3.3", "3.5"]
+    },
+    {
+      "id": "uaq-2026-1-26",
+      "name": "INGENIERÍA CIVIL (SAN JUAN DEL RÍO) (TRONCO COMÚN)",
+      "subjectIds": ["3.2", "3.3", "3.5"]
+    },
+    {
+      "id": "uaq-2026-1-27",
+      "name": "INGENIERÍA ELECTROMECÁNICA (SAN JUAN DEL RÍO)",
+      "subjectIds": ["3.2", "3.3", "3.5"]
+    },
+    {
+      "id": "uaq-2026-1-28",
+      "name": "INGENIERÍA EN AUTOMATIZACIÓN (QUERÉTARO)",
+      "subjectIds": ["3.2", "3.3", "3.5"]
+    },
+    {
+      "id": "uaq-2026-1-29",
+      "name": "INGENIERÍA EN AUTOMATIZACIÓN (SAN JUAN DEL RÍO) (TRONCO COMÚN)",
+      "subjectIds": ["3.2", "3.3", "3.5"]
+    },
+    {
+      "id": "uaq-2026-1-30",
+      "name": "INGENIERÍA EN NANOTECNOLOGÍA (QUERÉTARO-AEROPUERTO)",
+      "subjectIds": ["3.2", "3.3", "3.5"]
+    },
+    {
+      "id": "uaq-2026-1-31",
+      "name": "INGENIERÍA FÍSICA (QUERÉTARO-AEROPUERTO)",
+      "subjectIds": ["3.2", "3.3", "3.5"]
+    },
+    {
+      "id": "uaq-2026-1-32",
+      "name": "INGENIERÍA INDUSTRIAL Y DE MANUFACTURA (QUERÉTARO)",
+      "subjectIds": ["3.2", "3.3", "3.5"]
+    },
+    {
+      "id": "uaq-2026-1-33",
+      "name": "INGENIERÍA INDUSTRIAL Y DE MANUFACTURA (SAN JUAN DEL RÍO) (TRONCO COMÚN)",
+      "subjectIds": ["3.2", "3.3", "3.5"]
+    },
+    {
+      "id": "uaq-2026-1-34",
+      "name": "INGENIERÍA MECÁNICA Y AUTOMOTRIZ (SAN JUAN DEL RÍO)",
+      "subjectIds": ["3.2", "3.3", "3.5"]
+    },
+    {
+      "id": "uaq-2026-1-35",
+      "name": "MATEMÁTICAS APLICADAS (QUERÉTARO)",
+      "subjectIds": ["3.2", "3.3", "3.5"]
+    },
+    {
+      "id": "uaq-2026-1-36",
+      "name": "ADMINISTRACIÓN (QUERÉTARO)",
+      "subjectIds": ["3.1", "3.5", "3.8"]
+    },
+    {
+      "id": "uaq-2026-1-37",
+      "name": "ADMINISTRACIÓN (SAN JUAN DEL RÍO)",
+      "subjectIds": ["3.1", "3.5", "3.8"]
+    },
+    {
+      "id": "uaq-2026-1-38",
+      "name": "ADMINISTRACIÓN FINANCIERA (QUERÉTARO)",
+      "subjectIds": ["3.1", "3.5", "3.8"]
+    },
+    {
+      "id": "uaq-2026-1-39",
+      "name": "ADMINISTRACIÓN VIRTUAL (QUERÉTARO)",
+      "subjectIds": ["3.1", "3.5", "3.8"]
+    },
+    {
+      "id": "uaq-2026-1-40",
+      "name": "ARTES VISUALES ARTES PLÁSTICAS (QUERÉTARO)",
+      "subjectIds": ["3.1", "3.5", "3.8"]
+    },
+    {
+      "id": "uaq-2026-1-41",
+      "name": "CONTADOR PÚBLICO (QUERÉTARO)",
+      "subjectIds": ["3.1", "3.5", "3.8"]
+    },
+    {
+      "id": "uaq-2026-1-42",
+      "name": "CONTADOR PÚBLICO (SAN JUAN DEL RÍO)",
+      "subjectIds": ["3.1", "3.5", "3.8"]
+    },
+    {
+      "id": "uaq-2026-1-43",
+      "name": "CONTADOR PÚBLICO VIRTUAL (QUERÉTARO)",
+      "subjectIds": ["3.1", "3.5", "3.8"]
+    },
+    {
+      "id": "uaq-2026-1-44",
+      "name": "DERECHO (QUERÉTARO)",
+      "subjectIds": ["3.1", "3.5", "3.8"]
+    },
+    {
+      "id": "uaq-2026-1-45",
+      "name": "DERECHO (SAN JUAN DEL RÍO)",
+      "subjectIds": ["3.1", "3.5", "3.8"]
+    },
+    {
+      "id": "uaq-2026-1-46",
+      "name": "DISEÑO Y COMUNICACIÓN VISUAL (QUERÉTARO)",
+      "subjectIds": ["3.1", "3.5", "3.8"]
+    },
+    {
+      "id": "uaq-2026-1-47",
+      "name": "DOCENCIA DE LAS ARTES (QUERÉTARO)",
+      "subjectIds": ["3.1", "3.5", "3.8"]
+    },
+    {
+      "id": "uaq-2026-1-48",
+      "name": "EDUCACIÓN Y MEDIACIÓN INTERCULTURAL (QUERÉTARO)",
+      "subjectIds": ["3.1", "3.5", "3.8"]
+    },
+    {
+      "id": "uaq-2026-1-49",
+      "name": "NEGOCIOS Y COMERCIO INTERNACIONAL (QUERÉTARO)",
+      "subjectIds": ["3.1", "3.5", "3.8"]
+    }
+  ]
+}

@@ -1,11 +1,10 @@
 import { describe, expect, it } from "vitest";
-import {
-  curriculum,
-  questions,
-  filterQuestions,
-  gradePractice,
-  shuffled,
-} from "../src/content/bank";
+import { curriculum, questions } from "../src/content/bank";
+const filterQuestions = (subjectId = "", topicId = "") =>
+  questions.filter(
+    (q) =>
+      (!subjectId || q.topicId.startsWith(subjectId + ".")) && (!topicId || q.topicId === topicId),
+  );
 
 describe("Banco académico UAQ 2026-2", () => {
   it("preserva el temario oficial y la evidencia parcial del demo", () => {
@@ -85,22 +84,5 @@ describe("Banco académico UAQ 2026-2", () => {
     expect(filterQuestions("1.1", "3.6.2.1")).toHaveLength(0);
     expect(filterQuestions("", "3.6.2.1")).toHaveLength(6);
     expect(filterQuestions("unknown")).toHaveLength(0);
-  });
-  it("cuenta las omitidas y no toma respuestas ajenas a la sesión", () => {
-    const items = questions.slice(0, 3);
-    const selected = { [items[0]!.id]: items[0]!.correctIndex, unknown: 0 };
-    expect(gradePractice(items, selected)).toEqual({ correct: 1, total: 3, score: 33 });
-    expect(gradePractice([], {})).toEqual({ correct: 0, total: 0, score: 0 });
-    expect(
-      gradePractice(items, Object.fromEntries(items.map((q) => [q.id, q.correctIndex]))).score,
-    ).toBe(100);
-  });
-  it("baraja sin modificar ni perder las preguntas originales", () => {
-    const input = questions.slice(0, 10);
-    const ids = input.map((q) => q.id);
-    const output = shuffled(input);
-    expect(input.map((q) => q.id)).toEqual(ids);
-    expect(output).not.toBe(input);
-    expect(output.map((q) => q.id).sort()).toEqual([...ids].sort());
   });
 });

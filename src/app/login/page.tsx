@@ -29,7 +29,10 @@ export default function LoginPage() {
         return;
       }
 
-      router.push("/estudio");
+      const destination = new URLSearchParams(window.location.search).get("next");
+      router.push(
+        destination && /^\/(practica|estudio)(\?|$)/.test(destination) ? destination : "/estudio",
+      );
       router.refresh();
     } catch {
       setError("No se pudo conectar con el servidor. Intenta de nuevo.");
@@ -40,7 +43,9 @@ export default function LoginPage() {
 
   return (
     <main className="mx-auto flex min-h-screen max-w-sm flex-col justify-center px-6 py-16">
-      <p className="font-display text-sm uppercase tracking-widest text-acento">Plataforma EXCOBA</p>
+      <p className="font-display text-sm uppercase tracking-widest text-acento">
+        Plataforma EXCOBA
+      </p>
       <h1 className="mt-2 font-display text-3xl text-pizarron">Inicia sesión</h1>
 
       <form onSubmit={handleSubmit} className="mt-8 flex flex-col gap-4">

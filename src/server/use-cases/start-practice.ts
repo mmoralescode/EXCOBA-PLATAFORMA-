@@ -1,56 +1,77 @@
 import { z } from "zod";
 import { db } from "@/db/client";
+import { getCareer, officialTopicIds, prioritizeQuestions } from "@/content/study-plan";
 
 export const StartPracticeSchema = z.object({
   userId: z.string().min(1),
+  careerId: z.string().refine((id) => !!getCareer(id), "Selecciona una carrera del Anexo I."),
   subjectId: z.string().min(1).optional(),
   topicId: z.string().min(1).optional(),
+  scope: z.enum(["official", "extra", "all"]).default("all"),
   difficulty: z.enum(["BAJA", "MEDIA", "ALTA"]).optional(),
   questionCount: z.number().int().min(1).max(50).default(10),
 });
 
-/**
- * Crea un intento de práctica y selecciona preguntas publicadas al azar
- * según los filtros indicados. La respuesta devuelta al cliente NUNCA
- * incluye `isCorrect` (ver regla crítica de seguridad, Módulo 1 sección 8).
- */
-export async function startPractice(input: z.infer<typeof StartPracticeSchema>) {
+export async function startPractice(input: z.input<typeof StartPracticeSchema>) {
   const data = StartPracticeSchema.parse(input);
-
-  const candidateQuestions = await db.question.findMany({
-    where: {
-      status: "PUBLICADO",
-      deletedAt: null,
-      subjectId: data.subjectId,
-      topicId: data.topicId,
-      difficulty: data.difficulty,
-    },
-    select: {
-      id: true,
-      text: true,
-      difficulty: true,
-      estimatedTimeSeconds: true,
-      answers: { select: { id: true, text: true, order: true } },
-    },
-  });
-
-  const selected = shuffle(candidateQuestions).slice(0, data.questionCount);
-
+  const career = getCareer(data.careerId)!;
+  const [candidates, answered] = await Promise.all([
+    db.question.findMany({
+      where: {
+        status: "PUBLICADO",
+        deletedAt: null,
+        subjectId: data.subjectId,
+        difficulty: data.difficulty,
+        AND: [
+          data.topicId ? { topicId: data.topicId } : {},
+          data.scope === "official"
+            ? { topicId: { in: officialTopicIds } }
+            : data.scope === "extra"
+              ? { topicId: { notIn: officialTopicIds } }
+              : {},
+        ],
+      },
+      select: {
+        id: true,
+        topicId: true,
+        text: true,
+        difficulty: true,
+        estimatedTimeSeconds: true,
+        answers: { select: { id: true, text: true, order: true } },
+      },
+    }),
+    db.attemptAnswer.findMany({
+      where: {
+        attempt: { userId: data.userId, status: "ENTREGADO" },
+        selectedAnswerId: { not: null },
+      },
+      distinct: ["questionId"],
+      select: { questionId: true },
+    }),
+  ]);
+  const selected = prioritizeQuestions(
+    shuffle(candidates),
+    career,
+    new Set(answered.map((a) => a.questionId)),
+  ).slice(0, data.questionCount);
+  if (!selected.length) return { attemptId: null, questions: [] };
   const attempt = await db.attempt.create({
     data: {
       userId: data.userId,
       type: "PRACTICA",
       config: {
+        careerId: career.id,
         subjectId: data.subjectId ?? null,
         topicId: data.topicId ?? null,
+        scope: data.scope,
         difficulty: data.difficulty ?? null,
+        questionIds: selected.map((q) => q.id),
       },
     },
   });
-
   return {
     attemptId: attempt.id,
-    questions: selected.map((q) => ({
+    questions: selected.map(({ topicId: _topicId, ...q }) => ({
       ...q,
       answers: shuffle(q.answers),
     })),
@@ -61,9 +82,7 @@ function shuffle<T>(items: T[]): T[] {
   const copy = [...items];
   for (let i = copy.length - 1; i > 0; i--) {
     const j = Math.floor(Math.random() * (i + 1));
-    const temp = copy[i]!;
-    copy[i] = copy[j]!;
-    copy[j] = temp;
+    [copy[i], copy[j]] = [copy[j]!, copy[i]!];
   }
   return copy;
 }

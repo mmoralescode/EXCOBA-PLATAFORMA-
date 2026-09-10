@@ -1,7 +1,11 @@
 import { z } from "zod";
 import { db } from "@/db/client";
 import { recalculateTopicPriority } from "@/server/use-cases/study-priority";
-import { hasSameQuestionSet, getRemainingSeconds, parseSimulatorConfig } from "@/server/use-cases/simulator-rules";
+import {
+  hasSameQuestionSet,
+  getRemainingSeconds,
+  parseSimulatorConfig,
+} from "@/server/use-cases/simulator-rules";
 
 export const SubmitAttemptSchema = z.object({
   attemptId: z.string().min(1),
@@ -43,7 +47,13 @@ export async function submitAttempt(input: z.infer<typeof SubmitAttemptSchema>) 
 
   if (attempt.type === "SIMULADOR") {
     const config = parseSimulatorConfig(attempt.config);
-    if (!config || !hasSameQuestionSet(config.questionIds, data.answers.map((a) => a.questionId))) {
+    if (
+      !config ||
+      !hasSameQuestionSet(
+        config.questionIds,
+        data.answers.map((a) => a.questionId),
+      )
+    ) {
       throw new SubmitAttemptError("La entrega no coincide con las preguntas asignadas.");
     }
     if (getRemainingSeconds(attempt.startedAt, config) <= 0) {
@@ -55,6 +65,21 @@ export async function submitAttempt(input: z.infer<typeof SubmitAttemptSchema>) 
     }
   } else if (new Set(data.answers.map((a) => a.questionId)).size !== data.answers.length) {
     throw new SubmitAttemptError("La entrega contiene preguntas repetidas.");
+  }
+
+  // New practice sessions persist their assigned question set. Older sessions
+  // remain compatible; clients cannot substitute questions in new sessions.
+  if (attempt.type === "PRACTICA") {
+    const config = attempt.config as { questionIds?: unknown } | null;
+    if (
+      Array.isArray(config?.questionIds) &&
+      !hasSameQuestionSet(
+        config.questionIds as string[],
+        data.answers.map((a) => a.questionId),
+      )
+    ) {
+      throw new SubmitAttemptError("La entrega no coincide con las preguntas asignadas.");
+    }
   }
 
   const questionIds = data.answers.map((a) => a.questionId);
@@ -96,7 +121,10 @@ export async function submitAttempt(input: z.infer<typeof SubmitAttemptSchema>) 
     for (const answerData of attemptAnswersData) {
       await tx.attemptAnswer.upsert({
         where: {
-          attemptId_questionId: { attemptId: answerData.attemptId, questionId: answerData.questionId },
+          attemptId_questionId: {
+            attemptId: answerData.attemptId,
+            questionId: answerData.questionId,
+          },
         },
         create: answerData,
         update: answerData,

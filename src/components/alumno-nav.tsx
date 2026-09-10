@@ -6,7 +6,7 @@ import { useRouter } from "next/navigation";
 const LINKS = [
   { href: "/estudio", label: "Estudio" },
   { href: "/practica", label: "Práctica" },
-  { href: "/banco", label: "Banco 2026" },
+  { href: "/instructivo", label: "Instructivo" },
   { href: "/simulador", label: "Simulador" },
   { href: "/perfil", label: "Perfil" },
 ];
@@ -23,7 +23,9 @@ export function AlumnoNav() {
   return (
     <nav className="border-b border-ink/10 bg-white">
       <div className="mx-auto flex max-w-3xl flex-wrap items-center justify-between gap-4 px-6 py-4">
-        <p className="font-display text-lg text-pizarron">EXCOBA</p>
+        <Link href="/" className="font-display text-lg text-pizarron">
+          EXCOBA
+        </Link>
         <div className="flex flex-wrap items-center gap-4 text-sm">
           {LINKS.map((link) => (
             <Link key={link.href} href={link.href} className="text-ink/70 hover:text-pizarron">

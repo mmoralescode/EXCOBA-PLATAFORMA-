@@ -6,20 +6,20 @@ Next.js + TypeScript + PostgreSQL + Prisma, sin dependencia de servicios
 de IA en producción. Puede ejecutarse, mantenerse y desplegarse sin
 acceso a la conversación en la que fue generada.
 
-Repositorio personal: https://github.com/Magnusvron/EXCOBA-PLATAFORMA
+Repositorio: https://github.com/mmoralescode/EXCOBA-PLATAFORMA-
 
-**Versión de prueba del temario y banco:**
-https://magnusvron.github.io/EXCOBA-PLATAFORMA/
+Plataforma: https://excoba-plataforma.vercel.app
 
-La prueba ofrece 209 temas y 118 ejercicios originales con explicación, sin
-cuentas ni almacenamiento de resultados. Se compila con `npm run preview:build`
-y se publica mediante `.github/workflows/preview-pages.yml` desde `main`.
-La aplicación completa Next.js conserva sus rutas de cuentas y simulador;
-necesita PostgreSQL y un alojamiento compatible para funcionar.
+El inicio permite elegir entre las 49 carreras del Anexo I UAQ 2026-1.
+El instructivo presenta los 209 temas oficiales y la práctica prioriza las
+tres áreas de bachillerato de la carrera. El avance por asignatura se guarda
+con los intentos de la cuenta; el banco contiene 118 ejercicios propios para
+71 temas. El catálogo completo no implica ejercicios para todos los temas.
+Consulta [las reglas y la verificación de cobertura](docs/INSTRUCTIVO_CARRERAS.md).
 
-Este proyecto parte de https://github.com/mmoralescode/EXCOBA-PLATAFORMA-.
-La instancia original https://excoba-plataforma.vercel.app pertenece al
-despliegue de ese repositorio y no se actualiza desde esta copia personal.
+La vista estática (`npm run preview:build`) muestra únicamente el instructivo
+y enlaza a la plataforma para practicar. La aplicación Next.js requiere
+PostgreSQL y conserva sus rutas de cuentas, folios y simulador.
 
 ## Estado del proyecto
 
@@ -223,8 +223,6 @@ git push
 A partir de ahí, el job de CI (`prisma:migrate:deploy`) podrá aplicar
 esa migración contra el PostgreSQL efímero del workflow en cada push.
 
-
-
 ```text
 src/
   app/          Rutas (App Router): públicas, (alumno), (admin), api/
@@ -238,16 +236,16 @@ tests/          Pruebas (Vitest)
 
 ## Scripts disponibles
 
-| Comando | Descripción |
-|---|---|
-| `npm run dev` | Servidor de desarrollo |
-| `npm run build` | Build de producción |
-| `npm run start` | Servidor de producción (requiere build previo) |
-| `npm run lint` | Linter (ESLint) |
-| `npm run typecheck` | Verificación de tipos de TypeScript |
-| `npm test` | Pruebas (Vitest) |
-| `npm run prisma:migrate:dev` | Nueva migración en desarrollo |
-| `npm run db:seed` | Datos de desarrollo |
+| Comando                      | Descripción                                    |
+| ---------------------------- | ---------------------------------------------- |
+| `npm run dev`                | Servidor de desarrollo                         |
+| `npm run build`              | Build de producción                            |
+| `npm run start`              | Servidor de producción (requiere build previo) |
+| `npm run lint`               | Linter (ESLint)                                |
+| `npm run typecheck`          | Verificación de tipos de TypeScript            |
+| `npm test`                   | Pruebas (Vitest)                               |
+| `npm run prisma:migrate:dev` | Nueva migración en desarrollo                  |
+| `npm run db:seed`            | Datos de desarrollo                            |
 
 ## Licencia y propiedad
 

@@ -31,7 +31,7 @@ execFileSync(
 fs.writeFileSync(
   path.join(output, "index.html"),
   `<!doctype html>
-<html lang="es"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>EXCOBA UAQ 2026 · Temario y práctica</title><meta name="description" content="Explora 209 temas del instructivo y practica con 118 ejercicios originales con explicación."><link rel="stylesheet" href="./app.css"></head><body class="bg-paper font-body text-ink"><div id="root"></div><script defer src="./app.js"></script></body></html>\n`,
+<html lang="es"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>EXCOBA UAQ · Instructivo por temas</title><meta name="description" content="Todos los temas del instructivo oficial EXCOBA por asignatura."><link rel="stylesheet" href="./app.css"></head><body class="bg-paper font-body text-ink"><div id="root"></div><script defer src="./app.js"></script></body></html>\n`,
 );
 fs.writeFileSync(path.join(output, ".nojekyll"), "");
 console.info("Vista de prueba compilada en preview-dist");

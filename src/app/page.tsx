@@ -1,32 +1,35 @@
 import Link from "next/link";
+import { HomeStart } from "@/components/home-start";
 
 export default function HomePage() {
   return (
-    <main className="mx-auto flex min-h-screen max-w-3xl flex-col justify-center gap-6 px-6 py-24">
+    <main className="mx-auto flex min-h-screen max-w-3xl flex-col justify-center gap-6 px-6 py-12 sm:py-20">
       <p className="font-display text-sm uppercase tracking-widest text-acento">
         Plataforma EXCOBA
       </p>
       <h1 className="font-display text-4xl leading-tight text-pizarron sm:text-5xl">
-        Prepárate para el examen de admisión a la UAQ.
+        Tu carrera marca el inicio.
       </h1>
-      <p className="max-w-xl text-lg text-ink/80">
-        Estudio por materia y tema, práctica calificada y simuladores
-        cronometrados, basados en la guía EXCOBA.
+      <p className="max-w-xl text-lg leading-7 text-ink/75">
+        Prepara tu ingreso a la UAQ: elige tu carrera, decide por dónde empezar y practica a tu
+        ritmo.
       </p>
-
-      <div className="mt-4 flex gap-4">
-        <Link
-          href="/activar"
-          className="rounded-md bg-pizarron px-5 py-3 text-white transition hover:bg-pizarron/90"
-        >
-          Tengo un folio — crear cuenta
+      <HomeStart />
+      <div className="flex flex-wrap gap-x-6 gap-y-3 text-sm text-pizarron">
+        <Link href="/activar" className="underline">
+          Tengo un folio: crear cuenta
         </Link>
-        <Link
-          href="/login"
-          className="rounded-md border border-ink/20 px-5 py-3 text-ink transition hover:border-pizarron"
-        >
+        <Link href="/login" className="underline">
           Ya tengo cuenta
         </Link>
+      </div>
+      <div className="border-t border-ink/10 pt-5">
+        <Link href="/instructivo" className="font-medium text-pizarron underline">
+          Ver instructivo
+        </Link>
+        <p className="mt-2 text-sm text-ink/65">
+          Incluye todos los temas del instructivo oficial EXCOBA, organizados por asignatura.
+        </p>
       </div>
     </main>
   );
