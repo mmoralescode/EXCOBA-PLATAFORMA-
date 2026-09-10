@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useState } from "react";
 import { CareerSelector, CareerSourceNote, useCareer } from "./career-selector";
-import { isCommonSubject } from "@/content/study-plan";
+import { isCommonSubject } from "@/content/subject-rules";
 import type { StudySubject } from "@/content/study-types";
 
 export function StudyDashboard({ subjects }: { subjects: StudySubject[] }) {

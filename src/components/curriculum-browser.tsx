@@ -3,15 +3,18 @@
 import { useState } from "react";
 import Link from "next/link";
 import { CareerSourceNote, useCareer } from "./career-selector";
-import {
-  isCareerSubject,
-  isCommonSubject,
-  officialSubjects,
-  officialTopics,
-  topicTitle,
-} from "@/content/study-plan";
+import { isCareerSubject, isCommonSubject, topicTitle } from "@/content/subject-rules";
 
-export function CurriculumBrowser() {
+type CurriculumSubject = { id: string; name: string };
+type CurriculumTopic = { id: string; subjectId: string; name: string };
+
+export function CurriculumBrowser({
+  subjects,
+  topics,
+}: {
+  subjects: CurriculumSubject[];
+  topics: CurriculumTopic[];
+}) {
   const { career, ready } = useCareer();
   const [search, setSearch] = useState("");
   const [showAll, setShowAll] = useState(false);
@@ -20,10 +23,10 @@ export function CurriculumBrowser() {
       .normalize("NFD")
       .replace(/[\u0300-\u036f]/g, "")
       .toLowerCase();
-  const visibleSubjects = officialSubjects.filter(
+  const visibleSubjects = subjects.filter(
     (subject) => !career || showAll || isCareerSubject(subject.id, career),
   );
-  const filtered = officialTopics.filter(
+  const filtered = topics.filter(
     (topic) =>
       visibleSubjects.some((subject) => subject.id === topic.subjectId) &&
       normalize(topic.id + " " + topic.name).includes(normalize(search)),

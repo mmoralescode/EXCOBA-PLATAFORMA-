@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { curriculum, questions } from "../src/content/bank";
+import { subjectNames } from "../src/content/subject-catalog";
 const filterQuestions = (subjectId = "", topicId = "") =>
   questions.filter(
     (q) =>
@@ -7,6 +8,12 @@ const filterQuestions = (subjectId = "", topicId = "") =>
   );
 
 describe("Banco académico UAQ 2026-2", () => {
+  it("mantiene sincronizados los nombres de asignatura sin duplicar los temas en el cliente", () => {
+    expect(subjectNames).toEqual(
+      Object.fromEntries(curriculum.subjects.map((subject) => [subject.id, subject.name])),
+    );
+  });
+
   it("preserva el temario oficial y la evidencia parcial del demo", () => {
     expect(curriculum.topics).toHaveLength(209);
     expect(curriculum.subjects).toHaveLength(14);

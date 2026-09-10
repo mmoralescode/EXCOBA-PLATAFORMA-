@@ -6,7 +6,13 @@ import { CurriculumBrowser } from "../src/components/curriculum-browser";
 import { StudyDashboard } from "../src/components/study-dashboard";
 import { HomeStart } from "../src/components/home-start";
 import HomePage from "../src/app/page";
-import { careers, getCareer, officialSubjects, subjectDbId } from "../src/content/study-plan";
+import {
+  careers,
+  getCareer,
+  officialSubjects,
+  officialTopics,
+  subjectDbId,
+} from "../src/content/study-plan";
 import sourceCatalog from "../src/content/career-sources.json";
 import type { StudySubject } from "../src/content/study-types";
 
@@ -110,14 +116,35 @@ describe("Plan visible para el estudiante", () => {
   });
 
   it("filtra el instructivo a nueve asignaturas con carrera y conserva las catorce sin selección", () => {
-    expect(render(React.createElement(CurriculumBrowser)).match(/<summary /g)).toHaveLength(9);
+    expect(
+      render(
+        React.createElement(CurriculumBrowser, {
+          subjects: officialSubjects,
+          topics: officialTopics,
+        }),
+      ).match(/<summary /g),
+    ).toHaveLength(9);
     selection.careerId = "";
-    expect(render(React.createElement(CurriculumBrowser)).match(/<summary /g)).toHaveLength(14);
+    expect(
+      render(
+        React.createElement(CurriculumBrowser, {
+          subjects: officialSubjects,
+          topics: officialTopics,
+        }),
+      ).match(/<summary /g),
+    ).toHaveLength(14);
   });
 
   it("muestra todo el instructivo cuando el alumno lo elige", () => {
     selection.showAll = true;
-    expect(render(React.createElement(CurriculumBrowser)).match(/<summary /g)).toHaveLength(14);
+    expect(
+      render(
+        React.createElement(CurriculumBrowser, {
+          subjects: officialSubjects,
+          topics: officialTopics,
+        }),
+      ).match(/<summary /g),
+    ).toHaveLength(14);
   });
 });
 

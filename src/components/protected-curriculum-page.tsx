@@ -2,6 +2,7 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 import { CurriculumBrowser } from "@/components/curriculum-browser";
 import { getSessionUser } from "@/lib/session";
+import { officialSubjects, officialTopics } from "@/content/study-plan";
 
 export async function ProtectedCurriculumPage({
   returnPath,
@@ -50,7 +51,10 @@ export async function ProtectedCurriculumPage({
           </p>
         </div>
       </details>
-      <CurriculumBrowser />
+      <CurriculumBrowser
+        subjects={officialSubjects.map(({ id, name }) => ({ id, name }))}
+        topics={officialTopics.map(({ id, subjectId, name }) => ({ id, subjectId, name }))}
+      />
       <p className="mt-8 text-xs leading-5 text-ink/50">
         Temario: instructivo EXCOBA-UAQ Licenciatura 2026-2, páginas 4–16. La selección de carreras
         reúne el Anexo I de 2026-2 y referencias de 2026-1 y 2025-2 identificadas en el selector. La

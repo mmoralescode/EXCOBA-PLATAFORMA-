@@ -21,16 +21,37 @@ import { NextRequest, NextResponse } from "next/server";
  * siempre en el servidor dentro de cada Route Handler/Server Component vía
  * `requireUser`/`requireRole` (ver `src/lib/authorization.ts`).
  */
-export const PROTECTED_PREFIXES = [
-  "/estudio",
-  "/practica",
-  "/simulador",
-  "/perfil",
-  "/instructivo",
-  "/temario",
-  "/admin",
-];
+export const PUBLIC_PAGE_PATHS = [
+  "/",
+  "/activar",
+  "/login",
+  "/recuperar-password",
+  "/recuperar-password/confirmar",
+] as const;
+export const PUBLIC_API_PATHS = [
+  "/api/auth/login",
+  "/api/auth/register",
+  "/api/auth/forgot-password",
+  "/api/auth/reset-password",
+  "/api/licenses/activate",
+] as const;
 const SESSION_COOKIE_NAME = "excoba_session";
+
+export function isPublicPath(pathname: string) {
+  return (
+    PUBLIC_PAGE_PATHS.some((path) => pathname === path) ||
+    PUBLIC_API_PATHS.some((path) => pathname === path)
+  );
+}
+
+function secureResponse(response: NextResponse, cspHeader: string, privateContent = false) {
+  response.headers.set("Content-Security-Policy", cspHeader);
+  response.headers.set("X-Content-Type-Options", "nosniff");
+  response.headers.set("X-Frame-Options", "DENY");
+  response.headers.set("Referrer-Policy", "strict-origin-when-cross-origin");
+  if (privateContent) response.headers.set("Cache-Control", "private, no-store");
+  return response;
+}
 
 export function middleware(request: NextRequest) {
   const nonce = Buffer.from(crypto.randomUUID()).toString("base64");
@@ -53,28 +74,28 @@ export function middleware(request: NextRequest) {
   requestHeaders.set("x-nonce", nonce);
   requestHeaders.set("Content-Security-Policy", cspHeader);
 
-  const response = NextResponse.next({ request: { headers: requestHeaders } });
-
-  response.headers.set("Content-Security-Policy", cspHeader);
-  response.headers.set("X-Content-Type-Options", "nosniff");
-  response.headers.set("X-Frame-Options", "DENY");
-  response.headers.set("Referrer-Policy", "strict-origin-when-cross-origin");
-
-  const isProtected = PROTECTED_PREFIXES.some(
-    (prefix) =>
-      request.nextUrl.pathname === prefix || request.nextUrl.pathname.startsWith(`${prefix}/`),
-  );
-
+  const isProtected = !isPublicPath(request.nextUrl.pathname);
   if (isProtected) {
     const hasSessionCookie = request.cookies.has(SESSION_COOKIE_NAME);
     if (!hasSessionCookie) {
+      if (request.nextUrl.pathname.startsWith("/api/")) {
+        return secureResponse(
+          NextResponse.json({ error: "No autenticado." }, { status: 401 }),
+          cspHeader,
+          true,
+        );
+      }
       const loginUrl = new URL("/login", request.url);
       loginUrl.searchParams.set("next", request.nextUrl.pathname + request.nextUrl.search);
-      return NextResponse.redirect(loginUrl);
+      return secureResponse(NextResponse.redirect(loginUrl), cspHeader, true);
     }
   }
 
-  return response;
+  return secureResponse(
+    NextResponse.next({ request: { headers: requestHeaders } }),
+    cspHeader,
+    isProtected,
+  );
 }
 
 export const config = {

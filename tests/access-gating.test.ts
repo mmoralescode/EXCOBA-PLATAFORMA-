@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { NextRequest } from "next/server";
-import { middleware, PROTECTED_PREFIXES } from "../src/middleware";
+import { middleware, PUBLIC_API_PATHS, PUBLIC_PAGE_PATHS } from "../src/middleware";
 import { safeAuthenticatedPath } from "../src/lib/safe-next-path";
 
 describe("acceso a contenido", () => {
@@ -23,9 +23,28 @@ describe("acceso a contenido", () => {
   );
 
   it("mantiene todas las páginas internas conocidas en la protección", () => {
-    expect(PROTECTED_PREFIXES).toEqual(
+    expect(PUBLIC_PAGE_PATHS).not.toEqual(
       expect.arrayContaining(["/instructivo", "/temario", "/estudio", "/practica", "/simulador"]),
     );
+  });
+
+  it.each(["/contenido-nuevo", "/api/contenido-nuevo", "/api/subjects", "/api/admin/licenses"])(
+    "protege por defecto incluso rutas futuras: %s",
+    (path) => {
+      const response = middleware(new NextRequest(`https://excoba.example${path}`));
+      expect(response.status).toBe(path.startsWith("/api/") ? 401 : 307);
+      expect(response.headers.get("cache-control")).toContain("no-store");
+    },
+  );
+
+  it("solo deja públicas las APIs necesarias para autenticarse o canjear un folio", () => {
+    expect(PUBLIC_API_PATHS).toEqual([
+      "/api/auth/login",
+      "/api/auth/register",
+      "/api/auth/forgot-password",
+      "/api/auth/reset-password",
+      "/api/licenses/activate",
+    ]);
   });
 });
 

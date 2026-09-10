@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
 import { CareerSelector, CareerSourceNote, useCareer } from "@/components/career-selector";
-import { isCareerSubject, isCommonSubject } from "@/content/study-plan";
+import { isCareerSubject, isCommonSubject } from "@/content/subject-rules";
 import type { StudySubject } from "@/content/study-types";
 
 type Subject = Omit<StudySubject, "topics">;

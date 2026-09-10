@@ -1,5 +1,6 @@
 import { createRoot } from "react-dom/client";
 import { CurriculumBrowser } from "../components/curriculum-browser";
+import { officialSubjects, officialTopics } from "../content/study-plan";
 
 createRoot(document.getElementById("root")!).render(
   <main className="mx-auto max-w-3xl px-6 py-12">
@@ -12,6 +13,6 @@ createRoot(document.getElementById("root")!).render(
     >
       Entrar a la plataforma
     </a>
-    <CurriculumBrowser />
+    <CurriculumBrowser subjects={officialSubjects} topics={officialTopics} />
   </main>,
 );

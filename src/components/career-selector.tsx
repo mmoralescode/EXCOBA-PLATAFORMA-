@@ -1,7 +1,8 @@
 "use client";
 
 import { useEffect, useId, useState } from "react";
-import { careers, CAREER_COOKIE, getCareer, officialSubjects } from "@/content/study-plan";
+import { careers, CAREER_COOKIE, getCareer } from "@/content/career-catalog";
+import { subjectName } from "@/content/subject-catalog";
 import sourceCatalog from "@/content/career-sources.json";
 
 const careerSources = sourceCatalog.careers as Record<
@@ -136,12 +137,7 @@ export function CareerSelector({
           <p>
             Tus tres áreas de bachillerato:{" "}
             {career.subjectIds
-              .map(
-                (subjectId) =>
-                  officialSubjects
-                    .find((subject) => subject.id === subjectId)
-                    ?.name.split(" · ")[1],
-              )
+              .map((subjectId) => subjectName(subjectId)?.split(" · ")[1])
               .filter(Boolean)
               .join(", ")}
             .
