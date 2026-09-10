@@ -91,9 +91,6 @@ export function CareerSelector({
   const keepSelection = career && !matches.some((item) => item.id === career.id);
   return (
     <div className="space-y-3">
-      <label htmlFor={id} className="block font-medium text-pizarron">
-        ¿A qué carrera quieres ingresar?
-      </label>
       <label htmlFor={`${id}-search`} className="sr-only">
         Buscar carrera o campus
       </label>
@@ -109,6 +106,7 @@ export function CareerSelector({
       />
       <select
         id={id}
+        aria-label="Carrera"
         value={value}
         onChange={(event) => {
           onChange(event.target.value);
