@@ -1,7 +1,9 @@
 import Link from "next/link";
 import { HomeStart } from "@/components/home-start";
+import { getSessionUser } from "@/lib/session";
 
-export default function HomePage() {
+export default async function HomePage() {
+  const hasAccess = Boolean(await getSessionUser());
   return (
     <main className="mx-auto flex min-h-screen max-w-3xl flex-col justify-center gap-6 px-6 py-12 sm:py-20">
       <p className="font-display text-sm uppercase tracking-widest text-acento">
@@ -14,18 +16,10 @@ export default function HomePage() {
         Prepara tu ingreso a la UAQ: elige tu carrera, decide por dónde empezar y practica a tu
         ritmo.
       </p>
-      <HomeStart />
-      <div className="flex flex-wrap gap-x-6 gap-y-3 text-sm text-pizarron">
-        <Link href="/activar" className="underline">
-          Tengo un folio: crear cuenta
-        </Link>
-        <Link href="/login" className="underline">
-          Ya tengo cuenta
-        </Link>
-      </div>
+      <HomeStart hasAccess={hasAccess} />
       <div className="border-t border-ink/10 pt-5">
         <Link href="/instructivo" className="font-medium text-pizarron underline">
-          Ver instructivo
+          Ver instructivo {hasAccess ? "" : "(requiere acceso)"}
         </Link>
         <p className="mt-2 text-sm text-ink/65">
           Incluye todos los temas del instructivo oficial EXCOBA, organizados por asignatura.

@@ -65,9 +65,16 @@ beforeEach(() => {
 
 describe("Plan visible para el estudiante", () => {
   it("lleva del inicio al estudio antes de practicar", () => {
-    const html = render(React.createElement(HomeStart));
+    const html = render(React.createElement(HomeStart, { hasAccess: true }));
     expect(html).toContain('href="/estudio"');
     expect(html).not.toContain('href="/practica"');
+  });
+
+  it("pide canjear folio o iniciar sesión antes de mostrar el plan", () => {
+    const html = render(React.createElement(HomeStart));
+    expect(html).toContain('href="/activar"');
+    expect(html).toContain('href="/login?next=%2Festudio"');
+    expect(html).not.toContain('href="/estudio"');
   });
 
   it("muestra primero tres áreas y luego seis asignaturas comunes, sin extras por defecto", () => {

@@ -3,6 +3,7 @@
 import { useState, FormEvent } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
+import { safeAuthenticatedPath } from "@/lib/safe-next-path";
 
 export default function LoginPage() {
   const router = useRouter();
@@ -31,9 +32,7 @@ export default function LoginPage() {
       }
 
       const destination = new URLSearchParams(window.location.search).get("next");
-      router.push(
-        destination && /^\/(practica|estudio)(\?|$)/.test(destination) ? destination : "/estudio",
-      );
+      router.push(safeAuthenticatedPath(destination));
       router.refresh();
     } catch {
       setError("No se pudo conectar con el servidor. Intenta de nuevo.");

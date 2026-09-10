@@ -21,7 +21,15 @@ import { NextRequest, NextResponse } from "next/server";
  * siempre en el servidor dentro de cada Route Handler/Server Component vía
  * `requireUser`/`requireRole` (ver `src/lib/authorization.ts`).
  */
-const PROTECTED_PREFIXES = ["/estudio", "/practica", "/simulador", "/perfil", "/admin"];
+export const PROTECTED_PREFIXES = [
+  "/estudio",
+  "/practica",
+  "/simulador",
+  "/perfil",
+  "/instructivo",
+  "/temario",
+  "/admin",
+];
 const SESSION_COOKIE_NAME = "excoba_session";
 
 export function middleware(request: NextRequest) {
@@ -52,8 +60,9 @@ export function middleware(request: NextRequest) {
   response.headers.set("X-Frame-Options", "DENY");
   response.headers.set("Referrer-Policy", "strict-origin-when-cross-origin");
 
-  const isProtected = PROTECTED_PREFIXES.some((prefix) =>
-    request.nextUrl.pathname.startsWith(prefix),
+  const isProtected = PROTECTED_PREFIXES.some(
+    (prefix) =>
+      request.nextUrl.pathname === prefix || request.nextUrl.pathname.startsWith(`${prefix}/`),
   );
 
   if (isProtected) {
