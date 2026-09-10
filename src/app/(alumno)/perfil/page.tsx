@@ -1,6 +1,7 @@
 import { requireUser } from "@/lib/authorization";
 import { db } from "@/db/client";
 import { getStudyRecommendations } from "@/server/use-cases/study-priority";
+import { formatLicenseDate, licenseExpiryLabel } from "@/components/license-validity";
 
 const PRIORITY_LABEL: Record<string, string> = {
   ALTA: "Prioridad alta",
@@ -37,12 +38,22 @@ export default async function PerfilPage() {
             <dd>{license.product.name}</dd>
             <dt className="text-ink/60">Estado</dt>
             <dd>{license.status}</dd>
-            <dt className="text-ink/60">Vence</dt>
+            {license.validityMonths && (
+              <>
+                <dt className="text-ink/60">Duración</dt>
+                <dd>{license.validityMonths} meses naturales desde la activación</dd>
+              </>
+            )}
+            <dt className="text-ink/60">Inicio</dt>
             <dd>
-              {license.expiresAt
-                ? license.expiresAt.toLocaleDateString("es-MX")
-                : "Sin vencimiento"}
+              {license.startsAt || license.activatedAt
+                ? formatLicenseDate((license.startsAt ?? license.activatedAt)!)
+                : license.validityMonths
+                  ? "Pendiente de activación"
+                  : "—"}
             </dd>
+            <dt className="text-ink/60">Vence</dt>
+            <dd>{licenseExpiryLabel(license)}</dd>
           </dl>
         ) : (
           <p className="mt-3 text-sm text-ink/60">No se encontró una licencia asociada.</p>

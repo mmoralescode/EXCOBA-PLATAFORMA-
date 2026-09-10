@@ -2,15 +2,15 @@ import { describe, it, expect } from "vitest";
 import { generateLicenseFolio, generateRandomToken, hashToken } from "@/lib/security/tokens";
 
 describe("tokens y folios", () => {
-  it("genera folios con el formato EXCOBA-XXXX-XXXX", () => {
+  it("genera folios de cuatro grupos sin caracteres ambiguos", () => {
     const folio = generateLicenseFolio();
-    expect(folio).toMatch(/^EXCOBA-[A-Z0-9]{4}-[A-Z0-9]{4}$/);
+    expect(folio).toMatch(/^EXCOBA(?:-[23456789ABCDEFGHJKMNPQRSTUVWXYZ]{4}){4}$/);
+    expect(folio.length).toBe(26);
   });
 
   it("genera folios distintos en llamadas sucesivas", () => {
-    const a = generateLicenseFolio();
-    const b = generateLicenseFolio();
-    expect(a).not.toBe(b);
+    const folios = new Set(Array.from({ length: 1000 }, () => generateLicenseFolio()));
+    expect(folios.size).toBe(1000);
   });
 
   it("el hash de un token es determinístico y no reversible a simple vista", () => {

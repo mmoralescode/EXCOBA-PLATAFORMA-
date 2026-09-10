@@ -47,7 +47,8 @@ model User {
   progress            Progress[]
   auditLogsAsActor    AuditLog[]            @relation("AuditActor")
   licenseEventsAsAdmin LicenseEvent[]       @relation("LicenseEventAdmin")
-  questionsAuthored   Question[]}
+  questionsAuthored   Question[]
+}
 
 model Role {
   id    String     @id @default(uuid())
@@ -98,8 +99,6 @@ model License {
   maxActivations Int          @default(1)
   // Legacy column already present in production: preserve it; new codes use validityMonths.
   validityDays Int? @ignore
-  // Null preserves the validity of licenses issued before activation-based terms.
-  validityMonths Int?
 
   createdAt   DateTime  @default(now())
   assignedAt  DateTime?

@@ -16,7 +16,9 @@ declare global {
 export const db =
   global.__prisma ??
   new PrismaClient({
-    log: process.env.NODE_ENV === "development" ? ["warn", "error"] : ["error"],
+    // Production handlers report redacted error codes; Prisma exception text
+    // may contain account data or connection details and must not be printed.
+    log: process.env.NODE_ENV === "development" ? ["warn", "error"] : [],
   });
 
 if (process.env.NODE_ENV !== "production") {

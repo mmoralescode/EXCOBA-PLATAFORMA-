@@ -1,29 +1,60 @@
 import { cookies } from "next/headers";
 import { db } from "@/db/client";
 import { generateRandomToken, hashToken } from "@/lib/security/tokens";
+import { canAccessPlatform } from "@/lib/license-access";
 
 export const SESSION_COOKIE_NAME = "excoba_session";
 const SESSION_DURATION_MS = 1000 * 60 * 60 * 24 * 7; // 7 días
+
+export class SessionAuthenticationError extends Error {
+  constructor() {
+    super("No se pudo autenticar la sesión.");
+    this.name = "SessionAuthenticationError";
+  }
+}
 
 /**
  * Crea una nueva sesión para el usuario y revoca cualquier sesión activa
  * previa, garantizando una única sesión activa por usuario (ver Módulo 1,
  * sección 12 / flujo de sesión única).
  */
-export async function createSession(userId: string, userAgent?: string) {
-  await db.session.updateMany({
-    where: { userId, revokedAt: null },
-    data: { revokedAt: new Date() },
-  });
-
+export async function createSession(
+  userId: string,
+  expectedPasswordHash: string,
+  userAgent?: string,
+) {
+  if (!expectedPasswordHash) throw new SessionAuthenticationError();
   const token = generateRandomToken();
-  const session = await db.session.create({
-    data: {
-      userId,
-      sessionTokenHash: hashToken(token),
-      expiresAt: new Date(Date.now() + SESSION_DURATION_MS),
-      userAgent: userAgent?.slice(0, 255),
-    },
+  const session = await db.$transaction(async (tx) => {
+    // Reset also locks User first. A login verified against a superseded hash
+    // cannot create a session after reset; concurrent logins serialize here too.
+    const matching = await tx.$queryRaw<Array<{ id: string }>>`
+      SELECT "id" FROM "User"
+      WHERE "id" = ${userId} AND "passwordHash" = ${expectedPasswordHash}
+        AND "status" = 'ACTIVO' AND "deletedAt" IS NULL
+      FOR UPDATE
+    `;
+    if (!matching.length) throw new SessionAuthenticationError();
+    const freshUser = await tx.user.findUnique({
+      where: { id: userId },
+      include: { roles: { include: { role: true } }, license: true },
+    });
+    const now = new Date();
+    if (!freshUser || !canAccessPlatform(freshUser, now)) {
+      throw new SessionAuthenticationError();
+    }
+    await tx.session.updateMany({
+      where: { userId, revokedAt: null },
+      data: { revokedAt: now },
+    });
+    return tx.session.create({
+      data: {
+        userId,
+        sessionTokenHash: hashToken(token),
+        expiresAt: new Date(now.getTime() + SESSION_DURATION_MS),
+        userAgent: userAgent?.slice(0, 255),
+      },
+    });
   });
 
   cookies().set(SESSION_COOKIE_NAME, token, {
@@ -58,11 +89,12 @@ export async function getSessionUser() {
     },
   });
 
-  if (!session || session.revokedAt || session.expiresAt < new Date()) {
+  const now = new Date();
+  if (!session || session.revokedAt || session.expiresAt <= now) {
     return null;
   }
 
-  if (session.user.status !== "ACTIVO") {
+  if (!canAccessPlatform(session.user, now)) {
     return null;
   }
 

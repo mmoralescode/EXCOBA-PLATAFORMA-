@@ -1,27 +1,32 @@
 import { NextRequest, NextResponse } from "next/server";
 import { ZodError } from "zod";
-import { registerUser, RegisterError } from "@/server/use-cases/register-user";
+import { registerUser, RegisterError, RegisterInputSchema } from "@/server/use-cases/register-user";
 import { checkRateLimit, RATE_LIMITS } from "@/lib/security/rate-limit";
+import { AuthRequestError, authClientIp, readAuthJson } from "@/lib/security/auth-request";
 
 export async function POST(request: NextRequest) {
-  const ip = request.headers.get("x-forwarded-for") ?? "unknown";
-  const rate = checkRateLimit(`register:${ip}`, RATE_LIMITS.register.limit, RATE_LIMITS.register.windowMs);
+  const ip = authClientIp(request);
+  const rate = checkRateLimit(
+    `register:${ip}`,
+    RATE_LIMITS.register.limit,
+    RATE_LIMITS.register.windowMs,
+  );
   if (!rate.allowed) {
     return NextResponse.json({ error: "Demasiados intentos. Intenta más tarde." }, { status: 429 });
   }
 
   try {
-    const body = await request.json();
+    const body = RegisterInputSchema.parse(await readAuthJson(request));
     const user = await registerUser(body);
     return NextResponse.json({ id: user.id, email: user.email }, { status: 201 });
   } catch (error) {
-    if (error instanceof ZodError) {
-      return NextResponse.json({ error: "Datos inválidos.", details: error.flatten() }, { status: 400 });
+    if (error instanceof ZodError || error instanceof AuthRequestError) {
+      return NextResponse.json({ error: "Datos inválidos." }, { status: 400 });
     }
     if (error instanceof RegisterError) {
       return NextResponse.json({ error: error.message }, { status: 400 });
     }
-    console.error("Error en registro:", error);
+    console.error("[register] registration_failed");
     return NextResponse.json({ error: "Error interno del servidor." }, { status: 500 });
   }
 }

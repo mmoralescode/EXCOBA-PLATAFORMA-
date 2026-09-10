@@ -1,78 +1,112 @@
-/**
- * Envoltorio del servicio de correo transaccional.
- *
- * Proveedor: Resend (https://resend.com) vía su API HTTP directa — sin SDK
- * ni dependencias nativas, sólo `fetch`, para evitar la categoría entera de
- * problemas de empaquetado que ya vivimos con `argon2` en Vercel.
- *
- * Configuración requerida en producción (variables de entorno en Vercel):
- *   EMAIL_PROVIDER=resend
- *   RESEND_API_KEY=<tu API key de resend.com>
- *   EMAIL_FROM=<dirección remitente verificada, o el sandbox de Resend>
- *
- * Si RESEND_API_KEY no está configurada, o si EMAIL_PROVIDER es "console"
- * (o no está definida), el correo sólo se registra en los logs — nunca se
- * envía. Esto es intencional para desarrollo local, pero en producción
- * significa que nadie recibe el correo real; por eso este caso se marca
- * también con `console.error` (no sólo `warn`), para que sea visible en los
- * logs de Vercel como una condición anómala si ocurre en producción.
- */
+import { z } from "zod";
+
+/** No error contains recipient addresses, provider bodies, tokens or credentials. */
+export class EmailConfigurationError extends Error {
+  constructor(public readonly code: "PROVIDER" | "API_KEY" | "SENDER" | "APP_URL") {
+    super("El servicio de correo no está configurado.");
+    this.name = "EmailConfigurationError";
+  }
+}
+
+export class EmailDeliveryError extends Error {
+  constructor(
+    public readonly code: "NETWORK" | "REJECTED" | "INVALID_RESPONSE",
+    public readonly status?: number,
+  ) {
+    super("El proveedor no confirmó la aceptación del correo.");
+    this.name = "EmailDeliveryError";
+  }
+}
+
+export const EMAIL_TIMEOUT_MS = 2500;
+
+function emailConfiguration() {
+  if (process.env.EMAIL_PROVIDER !== "resend") throw new EmailConfigurationError("PROVIDER");
+  const apiKey = process.env.RESEND_API_KEY?.trim();
+  if (!apiKey || /\s/.test(apiKey)) throw new EmailConfigurationError("API_KEY");
+  const from = process.env.EMAIL_FROM?.trim() ?? "";
+  const address = from.includes("<") ? from.match(/^[^<>\r\n]+<([^<>]+)>$/)?.[1] : from;
+  if (!address || /[\r\n]/.test(from) || !z.string().email().safeParse(address).success) {
+    throw new EmailConfigurationError("SENDER");
+  }
+  // Resend itself enforces that the sender's domain is verified for this API key.
+  const domain = address.split("@")[1]!.toLowerCase();
+  if (domain === "resend.dev" || domain.endsWith(".resend.dev")) {
+    throw new EmailConfigurationError("SENDER");
+  }
+  return { apiKey, from };
+}
+
+function applicationOrigin() {
+  try {
+    const url = new URL(process.env.APP_URL ?? "");
+    const local = ["localhost", "127.0.0.1", "[::1]"].includes(url.hostname);
+    const protocolAllowed =
+      url.protocol === "https:" ||
+      (process.env.NODE_ENV !== "production" && local && url.protocol === "http:");
+    if (
+      !protocolAllowed ||
+      (process.env.NODE_ENV === "production" && local) ||
+      url.username ||
+      url.password ||
+      url.search ||
+      url.hash ||
+      url.pathname !== "/"
+    )
+      throw new Error();
+    return url.origin;
+  } catch {
+    throw new EmailConfigurationError("APP_URL");
+  }
+}
+
+/** Preflight before account lookup: missing configuration must never enumerate users. */
+export function assertEmailConfigured() {
+  emailConfiguration();
+  applicationOrigin();
+}
+
+/** Resolved means accepted by Resend, not delivered to the inbox. No console fallback. */
 export async function sendEmail(to: string, subject: string, body: string) {
-  const provider = process.env.EMAIL_PROVIDER ?? "console";
-
-  if (provider === "resend") {
-    const apiKey = process.env.RESEND_API_KEY;
-    if (!apiKey) {
-      console.error(
-        `[email:resend] RESEND_API_KEY no está configurada — no se pudo enviar correo a ${to}.`,
-      );
-      return;
-    }
-
-    const response = await fetch("https://api.resend.com/emails", {
+  const { apiKey, from } = emailConfiguration();
+  let response: Response;
+  try {
+    response = await fetch("https://api.resend.com/emails", {
       method: "POST",
       headers: {
         Authorization: `Bearer ${apiKey}`,
         "Content-Type": "application/json",
+        "User-Agent": "EXCOBA-Platform/1.0",
       },
-      body: JSON.stringify({
-        from: process.env.EMAIL_FROM ?? "onboarding@resend.dev",
-        to,
-        subject,
-        text: body,
-      }),
+      body: JSON.stringify({ from, to: [to], subject, text: body }),
+      signal: AbortSignal.timeout(EMAIL_TIMEOUT_MS),
+      cache: "no-store",
     });
-
-    if (!response.ok) {
-      const errorText = await response.text().catch(() => "");
-      console.error(
-        `[email:resend] Resend respondió ${response.status} al enviar a ${to}: ${errorText}`,
-      );
-    }
-    return;
+  } catch {
+    throw new EmailDeliveryError("NETWORK");
   }
-
-  if (provider === "console" || process.env.NODE_ENV !== "production") {
-    console.warn(`[email:${provider}] Para: ${to} | Asunto: ${subject}\n${body}`);
-    return;
-  }
-
-  console.error(`[email] Proveedor de correo "${provider}" no implementado — correo a ${to} perdido.`);
+  if (!response.ok) throw new EmailDeliveryError("REJECTED", response.status);
+  const payload: unknown = await response.json().catch(() => null);
+  const accepted = z.object({ id: z.string().min(1).max(128) }).safeParse(payload);
+  if (!accepted.success) throw new EmailDeliveryError("INVALID_RESPONSE");
+  return { id: accepted.data.id };
 }
 
 export async function sendPasswordResetEmail(to: string, token: string) {
-  const url = `${process.env.APP_URL}/recuperar-password/confirmar?token=${token}`;
-  await sendEmail(
+  const url = new URL("/recuperar-password/confirmar", applicationOrigin());
+  // Fragments are not sent to the server or included in HTTP access logs.
+  url.hash = new URLSearchParams({ token }).toString();
+  return sendEmail(
     to,
     "Recupera tu contraseña — Plataforma EXCOBA",
-    `Para restablecer tu contraseña visita este enlace (válido 30 minutos): ${url}\n\nSi no solicitaste este cambio, ignora este correo.`,
+    `Para restablecer tu contraseña visita este enlace (válido 30 minutos): ${url.toString()}\n\nSi no solicitaste este cambio, ignora este correo.`,
   );
 }
 
 export async function sendLicenseAssignedEmail(to: string, folio: string) {
-  await sendEmail(
+  return sendEmail(
     to,
     "Tu folio de acceso — Plataforma EXCOBA",
-    `Tu folio de activación es: ${folio}\n\nActívalo aquí: ${process.env.APP_URL}/activar`,
+    `Tu folio de activación es: ${folio}\n\nActívalo aquí: ${applicationOrigin()}/activar`,
   );
 }

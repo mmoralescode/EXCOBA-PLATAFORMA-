@@ -1,0 +1,159 @@
+{
+  "version": 1,
+  "batchId": "45a86690-9857-4819-8762-1eee70a7fd08",
+  "productId": "producto-guia-excoba",
+  "adminId": "d70f3041-08e7-4b7d-b4c4-314571dc27c6",
+  "validityMonths": 6,
+  "records": [
+    {
+      "id": "7a181d8e-40de-440f-80a0-84799d55823a",
+      "codeHash": "84c8ecb092abbcbd498b243e8f38e12bcd82d5edf13819312e9f9ce73dd12d80",
+      "codeLastFour": "3KY6"
+    },
+    {
+      "id": "9c78ccb0-b46d-4e8c-9361-2b8b1fa1b9b8",
+      "codeHash": "6eea2a7fb61f194685810243fe10e23154fee071727d34ba1c274ccc75ac68dc",
+      "codeLastFour": "9ZHD"
+    },
+    {
+      "id": "be62b1d4-d642-418f-8e4b-f03be9752629",
+      "codeHash": "ef2d192680fde7891221dc0dcfaae41182877fb0c0abd85ad76e88e4892cb559",
+      "codeLastFour": "9WDW"
+    },
+    {
+      "id": "65510da8-e024-4090-a2d3-4e77483a7ab0",
+      "codeHash": "a7d159c33354c00d71e85f5f7ed4bd2afc6c6c227d64459dce8b1a0f956b4d49",
+      "codeLastFour": "43H6"
+    },
+    {
+      "id": "c86430fc-19f6-4d39-8fdd-e954bcc66989",
+      "codeHash": "caed967c33303a20b841c6231e88e6ac1fc9c4c951529ed6a61e4fbe2664d9ce",
+      "codeLastFour": "B8EG"
+    },
+    {
+      "id": "f8910c07-234b-43d4-b60a-815a789d50e2",
+      "codeHash": "d801ea7eb85dd29a470eaaacce90f142846a71184f5fa4d3c4d4d331d567a703",
+      "codeLastFour": "XD6R"
+    },
+    {
+      "id": "b5254db8-d011-4a33-8f56-6933b9b988bb",
+      "codeHash": "298902fec5737531c10735d6a0934c3d3032ef17060c76525db73fd65ef4f75c",
+      "codeLastFour": "G5FG"
+    },
+    {
+      "id": "99927644-2ffe-4058-806b-3f28e72812df",
+      "codeHash": "51f3c2706b21233dcd62929ac3b1f540c5e8d0d3c08a1e91b70fd9a0178beb6b",
+      "codeLastFour": "BZQS"
+    },
+    {
+      "id": "7d9632d5-a1a1-489f-a4a4-94ae3e8f5d1c",
+      "codeHash": "41dd348c92ec589f1a1abc7b269f6ae1caa42dedfc4fa5e11ed2421af4f622b6",
+      "codeLastFour": "7AF2"
+    },
+    {
+      "id": "2a4f110f-325a-4d83-b903-db4c408cb9ec",
+      "codeHash": "e9557e9419e92218763943bd19d9aa2fffd8a98002b65f2fb581b12067b18086",
+      "codeLastFour": "3Z5Z"
+    },
+    {
+      "id": "7804d9d9-2301-4201-ae4d-f15b9626db46",
+      "codeHash": "fc3523daf2a0f8d24e3e24ff5250fb704d46fb7a435746e2e8283803be5e11a4",
+      "codeLastFour": "MZ3J"
+    },
+    {
+      "id": "cc982014-ddfb-4803-84e2-65ebe21e3a46",
+      "codeHash": "8a28d69ffbe518663cab2a2e55ef79d432c99c534652395383faface4d10fd63",
+      "codeLastFour": "EDA8"
+    },
+    {
+      "id": "b1263258-fe9a-4f11-a2cf-c32dcbc42a55",
+      "codeHash": "469616203c3a9a2ec7a78c5717a8d5c4d08c292538e85f7d9705efd8d650831d",
+      "codeLastFour": "W68Y"
+    },
+    {
+      "id": "dba0e32a-6152-4217-ac50-9f07361d7d28",
+      "codeHash": "a57594ad38ec1ebc9abcf9b984f075f88b85cbcf0b03fb751ad79cb1115fe39f",
+      "codeLastFour": "UNQV"
+    },
+    {
+      "id": "5a9dbf19-e271-4a23-87a3-0922257943e6",
+      "codeHash": "9d04915443e7e35611074d0a63d4d995978bd636e690786aaa243365dfaa81f2",
+      "codeLastFour": "HZ2X"
+    },
+    {
+      "id": "8474c06e-cc87-44bc-8b54-eff8847f2d00",
+      "codeHash": "41468e88ce1d25f889e598246084ad75db7b0bc2dfc324f5d788c317a919c4f7",
+      "codeLastFour": "UPXV"
+    },
+    {
+      "id": "f7e7e30d-003d-42a0-9fb1-2dede9f61f4f",
+      "codeHash": "b9751dd358b88554d1030d10d6d39d7b70d3f35a382356842bb288d501443882",
+      "codeLastFour": "E4Z3"
+    },
+    {
+      "id": "31fb648b-2e02-497d-a835-6936766b0d87",
+      "codeHash": "0a5ee499c7411e37cc6577a481dba218ef5d4dea63708fbb4d753acec19b61e3",
+      "codeLastFour": "HS4S"
+    },
+    {
+      "id": "85ead284-4603-43f5-bb52-1ab38a7a9d0f",
+      "codeHash": "47707ce556801760d0188322f1afd471a979176949c363303296ccb3742dc2c7",
+      "codeLastFour": "TM47"
+    },
+    {
+      "id": "4e82e2f0-3776-4b67-9406-4801d25dff0f",
+      "codeHash": "87dc036950011290b6c911b26b116882fdaf55e4b2ea4a0bc41bd17afc7b011e",
+      "codeLastFour": "KKSP"
+    },
+    {
+      "id": "69f10acd-fe90-4776-8654-d2b9cd1fd967",
+      "codeHash": "62287d6e86f325c1b25352f36052d4808ab1fc44fe76f11d4a2adf05944a94d3",
+      "codeLastFour": "GY8S"
+    },
+    {
+      "id": "4fe398ef-1e04-4188-be3f-ea166111dc02",
+      "codeHash": "82fe0354558d0cc40b0fc2a3163ae245586b9bd1320dcc87108f3a9efe99d130",
+      "codeLastFour": "D6SW"
+    },
+    {
+      "id": "36a2771e-2ab7-4953-8a3f-8f4bf7fa46f6",
+      "codeHash": "229d1419dfe87ad767d6344353382f085cfa409c108683dacb92627d1da50a78",
+      "codeLastFour": "RM2J"
+    },
+    {
+      "id": "d963c519-530b-4e23-8a7d-c225d6448ab1",
+      "codeHash": "e1bbcb171611db711f181d46068881b75be31c07c79664fa06d8d6e48df83cc6",
+      "codeLastFour": "UTTF"
+    },
+    {
+      "id": "295e414e-69dd-4803-989b-4703da4f3cee",
+      "codeHash": "12ba4c4ae5160e118b20f2e648cf2ff7eb51fc202e4460ff3813b25fbc1abdd3",
+      "codeLastFour": "RK9C"
+    },
+    {
+      "id": "bb602552-1bdf-4fd3-8dd1-5c982be0eade",
+      "codeHash": "f7ba40162e0d3264722a7fed56cd975ec6c2af66a11a2e2b7392140ac76fd87e",
+      "codeLastFour": "KDQW"
+    },
+    {
+      "id": "c9a28f27-99f0-48fc-86e7-95929dd424c4",
+      "codeHash": "5beca4ffa76b60c4b088c4bccba4f5ce92ba3a1b5a33f5a78ab6dccdb11594aa",
+      "codeLastFour": "YSFF"
+    },
+    {
+      "id": "3a666b09-9a51-44d5-8b55-364689c7cee0",
+      "codeHash": "ae65ccdb5561bd15774bd048fef5e1b6e8397d1904f9ce1cd8e8281c08415609",
+      "codeLastFour": "5SKT"
+    },
+    {
+      "id": "8c8f6e99-627b-4b01-ab28-cdae86528bf8",
+      "codeHash": "47859c7427869decefb36a5b067f0dea5b6cf98ec667f01051447765c495ca41",
+      "codeLastFour": "QTHH"
+    },
+    {
+      "id": "5f4167f3-d045-41ca-937c-20e842dbcf1e",
+      "codeHash": "e924cf5d70547f43e5767aeed2b956425d612f9da0f4dc98d55bcb078b66aeb5",
+      "codeLastFour": "34HP"
+    }
+  ]
+}

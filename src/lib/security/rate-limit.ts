@@ -16,11 +16,7 @@ export interface RateLimitResult {
   resetAt: number;
 }
 
-export function checkRateLimit(
-  key: string,
-  limit: number,
-  windowMs: number,
-): RateLimitResult {
+export function checkRateLimit(key: string, limit: number, windowMs: number): RateLimitResult {
   const now = Date.now();
   const existing = buckets.get(key);
 
@@ -41,7 +37,10 @@ export function checkRateLimit(
 /** Límites por endpoint sensible (ver Módulo 1, sección 11 y Módulo 10). */
 export const RATE_LIMITS = {
   login: { limit: 5, windowMs: 5 * 60 * 1000 },
-  register: { limit: 5, windowMs: 60 * 60 * 1000 },
-  activateLicense: { limit: 5, windowMs: 15 * 60 * 1000 },
+  // Shared school Wi-Fi must allow a class to register and sign in.
+  loginIp: { limit: 60, windowMs: 5 * 60 * 1000 },
+  register: { limit: 60, windowMs: 60 * 60 * 1000 },
+  activateLicense: { limit: 60, windowMs: 15 * 60 * 1000 },
   passwordReset: { limit: 3, windowMs: 60 * 60 * 1000 },
+  passwordResetIp: { limit: 60, windowMs: 60 * 60 * 1000 },
 } as const;

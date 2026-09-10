@@ -1,4 +1,4 @@
-import { randomBytes, createHash } from "crypto";
+import { randomBytes, randomInt, createHash } from "crypto";
 
 /**
  * Genera un token aleatorio criptográficamente seguro, codificado en base64url.
@@ -19,21 +19,13 @@ export function hashToken(token: string): string {
 }
 
 /**
- * Genera un folio legible con el formato EXCOBA-XXXX-XXXX (ver Módulo 1,
- * sección 6). Usa un alfabeto sin caracteres ambiguos (sin 0/O, 1/I/L).
+ * Folio EXCOBA-XXXX-XXXX-XXXX-XXXX, con 16 caracteres aleatorios
+ * (aproximadamente 78 bits). Sin caracteres ambiguos ni sesgo de módulo.
  */
 const ALPHABET = "23456789ABCDEFGHJKMNPQRSTUVWXYZ";
 
 export function generateLicenseFolio(): string {
-  const randomChar = () => {
-    // randomBytes(1) siempre devuelve un Buffer de longitud 1, y el
-    // resultado del módulo siempre cae dentro de ALPHABET; los `!` son
-    // seguros aquí. Se anotan explícitamente porque `noUncheckedIndexedAccess`
-    // (tsconfig.json) marca todo acceso por índice como potencialmente
-    // `undefined`.
-    const byte = randomBytes(1)[0]!;
-    return ALPHABET[byte % ALPHABET.length]!;
-  };
+  const randomChar = () => ALPHABET[randomInt(ALPHABET.length)]!;
   const group = () => Array.from({ length: 4 }, randomChar).join("");
-  return `EXCOBA-${group()}-${group()}`;
+  return `EXCOBA-${group()}-${group()}-${group()}-${group()}`;
 }
