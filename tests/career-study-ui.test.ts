@@ -5,6 +5,7 @@ import { CareerSelector, CareerSourceNote } from "../src/components/career-selec
 import { CurriculumBrowser } from "../src/components/curriculum-browser";
 import { StudyDashboard } from "../src/components/study-dashboard";
 import { HomeStart } from "../src/components/home-start";
+import HomePage from "../src/app/page";
 import { careers, getCareer, officialSubjects, subjectDbId } from "../src/content/study-plan";
 import sourceCatalog from "../src/content/career-sources.json";
 import type { StudySubject } from "../src/content/study-types";
@@ -64,13 +65,22 @@ beforeEach(() => {
 });
 
 describe("Plan visible para el estudiante", () => {
-  it("lleva del inicio al estudio antes de practicar", () => {
-    const html = render(React.createElement(HomeStart, { hasAccess: true }));
-    expect(html).toContain('href="/estudio"');
-    expect(html).not.toContain('href="/practica"');
+  it("muestra solo la bienvenida y los dos accesos en la portada", () => {
+    const html = render(React.createElement(HomePage));
+    expect(html).toContain("Tu carrera marca el inicio.");
+    expect(html).toContain("Tengo un folio");
+    expect(html).toContain("Iniciar sesión");
+    expect([...html.matchAll(/href="([^"]+)"/g)].map((match) => match[1])).toEqual([
+      "/activar",
+      "/login?next=%2Festudio",
+    ]);
+    expect(html).not.toContain("<select");
+    expect(html).not.toContain("Buscar carrera o campus");
+    expect(html).not.toContain("Ver instructivo");
   });
 
-  it("pide canjear folio o iniciar sesión antes de mostrar el plan", () => {
+  it("ofrece canjear folio e iniciar sesión sin elegir primero una carrera", () => {
+    selection.careerId = "";
     const html = render(React.createElement(HomeStart));
     expect(html).toContain('href="/activar"');
     expect(html).toContain('href="/login?next=%2Festudio"');
