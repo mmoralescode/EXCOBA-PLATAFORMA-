@@ -13,8 +13,8 @@ export async function ProtectedCurriculumPage({
 
   return (
     <main className="mx-auto max-w-3xl px-6 py-12 sm:py-16">
-      <Link href="/" className="text-sm text-pizarron underline">
-        ← Inicio
+      <Link href="/estudio" className="text-sm text-pizarron underline">
+        ← Volver a mi estudio
       </Link>
       <p className="mt-8 font-display text-sm uppercase tracking-widest text-acento">
         EXCOBA · UAQ · Guía de estudio
@@ -61,7 +61,7 @@ export async function ProtectedCurriculumPage({
         oferta y los periodos de ingreso dependen de cada facultad: pertenecer al catálogo no
         significa que haya una convocatoria abierta.
       </p>
-      <Link href="/" className="mt-6 inline-block text-sm text-pizarron underline">
+      <Link href="/estudio" className="mt-6 inline-block text-sm text-pizarron underline">
         Elegir carrera y continuar →
       </Link>
     </main>

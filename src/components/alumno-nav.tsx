@@ -23,7 +23,7 @@ export function AlumnoNav() {
   return (
     <nav className="border-b border-ink/10 bg-white">
       <div className="mx-auto flex max-w-3xl flex-wrap items-center justify-between gap-4 px-6 py-4">
-        <Link href="/" className="font-display text-lg text-pizarron">
+        <Link href="/estudio" className="font-display text-lg text-pizarron">
           EXCOBA
         </Link>
         <div className="flex flex-wrap items-center gap-4 text-sm">
