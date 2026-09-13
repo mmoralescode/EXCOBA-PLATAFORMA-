@@ -28,14 +28,17 @@ describe("acceso a contenido", () => {
     );
   });
 
-  it.each(["/contenido-nuevo", "/api/contenido-nuevo", "/api/subjects", "/api/admin/licenses"])(
-    "protege por defecto incluso rutas futuras: %s",
-    (path) => {
-      const response = middleware(new NextRequest(`https://excoba.example${path}`));
-      expect(response.status).toBe(path.startsWith("/api/") ? 401 : 307);
-      expect(response.headers.get("cache-control")).toContain("no-store");
-    },
-  );
+  it.each([
+    "/contenido-nuevo",
+    "/api/contenido-nuevo",
+    "/api/subjects",
+    "/api/admin/licenses",
+    "/api/privacy/accept",
+  ])("protege por defecto incluso rutas futuras: %s", (path) => {
+    const response = middleware(new NextRequest(`https://excoba.example${path}`));
+    expect(response.status).toBe(path.startsWith("/api/") ? 401 : 307);
+    expect(response.headers.get("cache-control")).toContain("no-store");
+  });
 
   it("solo deja públicas las APIs necesarias para autenticarse o canjear un folio", () => {
     expect(PUBLIC_API_PATHS).toEqual([

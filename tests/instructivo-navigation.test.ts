@@ -17,12 +17,18 @@ import { ProtectedCurriculumPage } from "../src/components/protected-curriculum-
 beforeEach(() => {
   vi.clearAllMocks();
   vi.stubGlobal("React", React);
+  vi.stubEnv("PRIVACY_CONTROLLER_NAME", "Responsable de prueba");
+  vi.stubEnv("PRIVACY_CONTROLLER_ADDRESS", "Domicilio de prueba");
+  vi.stubEnv("PRIVACY_CONTACT_EMAIL", "privacidad@example.com");
   mocks.session.mockResolvedValue({ id: "alumno-con-sesion-valida" });
   mocks.redirect.mockImplementation((path: string) => {
     throw new Error(`redirect:${path}`);
   });
 });
-afterEach(() => vi.unstubAllGlobals());
+afterEach(() => {
+  vi.unstubAllGlobals();
+  vi.unstubAllEnvs();
+});
 
 describe("Instructivo dentro de la cuenta del alumno", () => {
   it.each([

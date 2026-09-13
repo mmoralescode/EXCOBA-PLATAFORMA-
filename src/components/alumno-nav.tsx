@@ -9,6 +9,7 @@ const LINKS = [
   { href: "/instructivo", label: "Instructivo" },
   { href: "/simulador", label: "Simulador" },
   { href: "/perfil", label: "Perfil" },
+  { href: "/privacidad", label: "Privacidad" },
 ];
 
 export function AlumnoNav() {

@@ -1,17 +1,23 @@
 import { redirect } from "next/navigation";
 import { getSessionUser } from "@/lib/session";
 import { AlumnoNav } from "@/components/alumno-nav";
+import { PrivacyNoticeDialog } from "@/components/privacy-notice-dialog";
+import { privacyNoticeDetails } from "@/lib/privacy-notice";
+import { PRIVACY_NOTICE_VERSION } from "@/content/privacy-notice-version";
 
 export default async function AlumnoLayout({ children }: { children: React.ReactNode }) {
   // Guardia server-side real: el middleware sólo revisa que exista una
   // cookie con forma válida; esta llamada es la que efectivamente valida
   // la sesión contra la base de datos (ver Módulo 1, sección 10).
-  if (!(await getSessionUser())) redirect("/login");
+  const user = await getSessionUser();
+  if (!user) redirect("/login");
+  const needsPrivacyNotice = user.privacyNoticeVersion !== PRIVACY_NOTICE_VERSION;
 
   return (
     <div className="min-h-screen bg-paper">
       <AlumnoNav />
       {children}
+      {needsPrivacyNotice && <PrivacyNoticeDialog details={privacyNoticeDetails()} />}
     </div>
   );
 }
