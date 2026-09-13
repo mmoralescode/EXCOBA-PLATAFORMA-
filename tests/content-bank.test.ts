@@ -1,6 +1,8 @@
 import { describe, expect, it } from "vitest";
 import { curriculum, questions } from "../src/content/bank";
 import { subjectNames } from "../src/content/subject-catalog";
+import baseQuestions from "../src/content/questions.json";
+import expansion from "../src/content/simulator-expansion.json";
 const filterQuestions = (subjectId = "", topicId = "") =>
   questions.filter(
     (q) =>
@@ -18,7 +20,7 @@ describe("Banco académico UAQ 2026-2", () => {
     expect(curriculum.topics).toHaveLength(209);
     expect(curriculum.subjects).toHaveLength(14);
     expect(curriculum.topics.filter((t) => t.demoIds.length)).toHaveLength(71);
-    expect(new Set(questions.map((q) => q.topicId))).toEqual(
+    expect(new Set(baseQuestions.map((q) => q.topicId))).toEqual(
       new Set(curriculum.topics.filter((t) => t.demoIds.length).map((t) => t.id)),
     );
     expect(new Set(curriculum.topics.map((t) => t.id)).size).toBe(209);
@@ -33,7 +35,8 @@ describe("Banco académico UAQ 2026-2", () => {
     const mapping = curriculum.demoMapping as Record<string, { apartados: string[] }>;
     for (const q of questions) {
       expect(curriculum.topics.some((t) => t.id === q.topicId)).toBe(true);
-      expect(mapping[q.demoId]!.apartados).toContain(q.topicId);
+      if (q.demoId) expect(mapping[q.demoId]!.apartados).toContain(q.topicId);
+      else expect(expansion.some((added) => added.id === q.id)).toBe(true);
       expect(new Set(q.options).size).toBe(4);
       expect(q.options[q.correctIndex]).toBeTruthy();
       expect(q.explanation.length).toBeGreaterThan(20);
@@ -89,7 +92,7 @@ describe("Banco académico UAQ 2026-2", () => {
   it("filtra por materia y tema sin mezclar niveles", () => {
     expect(filterQuestions("1.1").every((q) => q.topicId.startsWith("1.1."))).toBe(true);
     expect(filterQuestions("1.1", "3.6.2.1")).toHaveLength(0);
-    expect(filterQuestions("", "3.6.2.1")).toHaveLength(6);
+    expect(filterQuestions("", "3.6.2.1")).toHaveLength(8);
     expect(filterQuestions("unknown")).toHaveLength(0);
   });
 });

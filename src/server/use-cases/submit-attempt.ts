@@ -115,87 +115,90 @@ export async function submitAttempt(input: z.infer<typeof SubmitAttemptSchema>) 
 
   const score = (correctCount / data.answers.length) * 100;
 
-  await db.$transaction(async (tx) => {
-    // En el simulador, las respuestas ya se fueron guardando con autosave
-    // (ver `saveSimulatorAnswer`); aquí se actualizan en vez de duplicarlas.
-    for (const answerData of attemptAnswersData) {
-      await tx.attemptAnswer.upsert({
-        where: {
-          attemptId_questionId: {
-            attemptId: answerData.attemptId,
-            questionId: answerData.questionId,
+  await db.$transaction(
+    async (tx) => {
+      // En el simulador, las respuestas ya se fueron guardando con autosave
+      // (ver `saveSimulatorAnswer`); aquí se actualizan en vez de duplicarlas.
+      for (const answerData of attemptAnswersData) {
+        await tx.attemptAnswer.upsert({
+          where: {
+            attemptId_questionId: {
+              attemptId: answerData.attemptId,
+              questionId: answerData.questionId,
+            },
           },
-        },
-        create: answerData,
-        update: answerData,
-      });
-    }
-
-    await tx.attempt.update({
-      where: { id: data.attemptId },
-      data: { status: "ENTREGADO", finishedAt: new Date(), score },
-    });
-
-    if (attempt.type === "SIMULADOR") {
-      const bySubject = new Map<string, { correct: number; total: number }>();
-      for (const a of attemptAnswersData) {
-        const subjectId = questionsById.get(a.questionId)?.subjectId;
-        if (!subjectId) continue;
-        const bucket = bySubject.get(subjectId) ?? { correct: 0, total: 0 };
-        bucket.total += 1;
-        if (a.isCorrect) bucket.correct += 1;
-        bySubject.set(subjectId, bucket);
+          create: answerData,
+          update: answerData,
+        });
       }
-      for (const [subjectId, bucket] of bySubject) {
-        await tx.examResult.create({
-          data: {
-            attemptId: data.attemptId,
-            subjectId,
-            score: (bucket.correct / bucket.total) * 100,
-            correctCount: bucket.correct,
-            totalCount: bucket.total,
+
+      await tx.attempt.update({
+        where: { id: data.attemptId },
+        data: { status: "ENTREGADO", finishedAt: new Date(), score },
+      });
+
+      if (attempt.type === "SIMULADOR") {
+        const bySubject = new Map<string, { correct: number; total: number }>();
+        for (const a of attemptAnswersData) {
+          const subjectId = questionsById.get(a.questionId)?.subjectId;
+          if (!subjectId) continue;
+          const bucket = bySubject.get(subjectId) ?? { correct: 0, total: 0 };
+          bucket.total += 1;
+          if (a.isCorrect) bucket.correct += 1;
+          bySubject.set(subjectId, bucket);
+        }
+        for (const [subjectId, bucket] of bySubject) {
+          await tx.examResult.create({
+            data: {
+              attemptId: data.attemptId,
+              subjectId,
+              score: (bucket.correct / bucket.total) * 100,
+              correctCount: bucket.correct,
+              totalCount: bucket.total,
+            },
+          });
+        }
+      }
+
+      // Actualiza `progress` por tema con las preguntas de este intento.
+      const topicIds = [...new Set(questions.map((q) => q.topicId))];
+      for (const topicId of topicIds) {
+        const topicAnswers = attemptAnswersData.filter(
+          (a) => questionsById.get(a.questionId)?.topicId === topicId,
+        );
+        const topicCorrect = topicAnswers.filter((a) => a.isCorrect).length;
+        const topicErrors = topicAnswers.length - topicCorrect;
+
+        const existing = await tx.progress.findUnique({
+          where: { userId_topicId: { userId: data.userId, topicId } },
+        });
+
+        const totalAttempts = (existing?.totalAttempts ?? 0) + topicAnswers.length;
+        const totalErrors = (existing?.totalErrors ?? 0) + topicErrors;
+        const totalCorrect = totalAttempts - totalErrors;
+        const accuracyPct = totalAttempts > 0 ? (totalCorrect / totalAttempts) * 100 : 0;
+
+        await tx.progress.upsert({
+          where: { userId_topicId: { userId: data.userId, topicId } },
+          create: {
+            userId: data.userId,
+            topicId,
+            accuracyPct,
+            totalAttempts,
+            totalErrors,
+            lastPracticedAt: new Date(),
+          },
+          update: {
+            accuracyPct,
+            totalAttempts,
+            totalErrors,
+            lastPracticedAt: new Date(),
           },
         });
       }
-    }
-
-    // Actualiza `progress` por tema con las preguntas de este intento.
-    const topicIds = [...new Set(questions.map((q) => q.topicId))];
-    for (const topicId of topicIds) {
-      const topicAnswers = attemptAnswersData.filter(
-        (a) => questionsById.get(a.questionId)?.topicId === topicId,
-      );
-      const topicCorrect = topicAnswers.filter((a) => a.isCorrect).length;
-      const topicErrors = topicAnswers.length - topicCorrect;
-
-      const existing = await tx.progress.findUnique({
-        where: { userId_topicId: { userId: data.userId, topicId } },
-      });
-
-      const totalAttempts = (existing?.totalAttempts ?? 0) + topicAnswers.length;
-      const totalErrors = (existing?.totalErrors ?? 0) + topicErrors;
-      const totalCorrect = totalAttempts - totalErrors;
-      const accuracyPct = totalAttempts > 0 ? (totalCorrect / totalAttempts) * 100 : 0;
-
-      await tx.progress.upsert({
-        where: { userId_topicId: { userId: data.userId, topicId } },
-        create: {
-          userId: data.userId,
-          topicId,
-          accuracyPct,
-          totalAttempts,
-          totalErrors,
-          lastPracticedAt: new Date(),
-        },
-        update: {
-          accuracyPct,
-          totalAttempts,
-          totalErrors,
-          lastPracticedAt: new Date(),
-        },
-      });
-    }
-  });
+    },
+    { timeout: 60_000 },
+  );
 
   // Recalcular prioridad fuera de la transacción principal: no debe
   // bloquear la entrega del intento si falla o tarda.

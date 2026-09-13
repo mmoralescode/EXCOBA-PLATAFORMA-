@@ -1,12 +1,21 @@
 import { z } from "zod";
 import { db } from "@/db/client";
+import {
+  SIMULATOR_QUESTION_COUNT,
+  SIMULATOR_TIME_LIMIT_SECONDS,
+} from "@/content/simulator-settings";
 
 export class SimulatorStartError extends Error {}
 
 export const StartSimulatorSchema = z.object({
   userId: z.string().min(1),
-  questionCount: z.number().int().min(5).max(200).default(40),
-  timeLimitSeconds: z.number().int().min(60).max(4 * 60 * 60).default(60 * 60),
+  questionCount: z.number().int().min(5).max(200).default(SIMULATOR_QUESTION_COUNT),
+  timeLimitSeconds: z
+    .number()
+    .int()
+    .min(60)
+    .max(4 * 60 * 60)
+    .default(SIMULATOR_TIME_LIMIT_SECONDS),
   subjectIds: z.array(z.string().min(1)).optional(),
 });
 

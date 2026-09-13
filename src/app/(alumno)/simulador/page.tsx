@@ -1,6 +1,12 @@
 "use client";
 
 import { useEffect, useRef, useState, useCallback } from "react";
+import { SimulatorAnswerBoard } from "@/components/simulator-answer-board";
+import { SimulatorFormulaSheet } from "@/components/simulator-formula-sheet";
+import {
+  SIMULATOR_QUESTION_COUNT,
+  SIMULATOR_TIME_LIMIT_SECONDS,
+} from "@/content/simulator-settings";
 
 interface Answer {
   id: string;
@@ -33,12 +39,15 @@ export default function SimuladorPage() {
   const [remainingSeconds, setRemainingSeconds] = useState<number | null>(null);
   const [result, setResult] = useState<Result | null>(null);
   const [loading, setLoading] = useState(false);
+  const [recovering, setRecovering] = useState(true);
+  const [currentIndex, setCurrentIndex] = useState(0);
   const [error, setError] = useState<string | null>(null);
 
   const attemptIdRef = useRef<string | null>(null);
   const questionsRef = useRef<Question[]>([]);
   const selectedRef = useRef<Record<string, string>>({});
   const submittingRef = useRef(false);
+  const saveQueue = useRef<Promise<void>>(Promise.resolve());
   attemptIdRef.current = attemptId;
   questionsRef.current = questions;
   selectedRef.current = selected;
@@ -48,6 +57,7 @@ export default function SimuladorPage() {
     submittingRef.current = true;
     setLoading(true);
     try {
+      await saveQueue.current;
       const response = await fetch("/api/simulator/submit", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -104,6 +114,8 @@ export default function SimuladorPage() {
         }
       } catch {
         if (!cancelled) setError("No se pudo recuperar el simulador activo.");
+      } finally {
+        if (!cancelled) setRecovering(false);
       }
     }
     recoverSimulator();
@@ -155,7 +167,10 @@ export default function SimuladorPage() {
       const response = await fetch("/api/simulator/start", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ questionCount: 20, timeLimitSeconds: 20 * 60 }),
+        body: JSON.stringify({
+          questionCount: SIMULATOR_QUESTION_COUNT,
+          timeLimitSeconds: SIMULATOR_TIME_LIMIT_SECONDS,
+        }),
       });
       const data = await response.json();
       if (!response.ok) {
@@ -170,6 +185,7 @@ export default function SimuladorPage() {
       setQuestions(data.questions);
       setRemainingSeconds(data.timeLimitSeconds);
       setSelected({});
+      setCurrentIndex(0);
       submittingRef.current = false;
     } catch {
       setError("No se pudo conectar con el servidor.");
@@ -178,19 +194,31 @@ export default function SimuladorPage() {
     }
   }
 
-  async function selectAnswer(questionId: string, answerId: string) {
-    setSelected((prev) => ({ ...prev, [questionId]: answerId }));
-    if (!attemptId) return;
+  function selectAnswer(questionId: string, answerId: string | null) {
+    if (!attemptId || loading || remainingSeconds === 0) return;
+    const next = { ...selectedRef.current };
+    if (answerId) next[questionId] = answerId;
+    else delete next[questionId];
+    selectedRef.current = next;
+    setSelected(next);
+    setError(null);
     // Autosave: se guarda de inmediato en el servidor para poder recuperar
     // el intento si hay una desconexión (ver Módulo 8).
-    const response = await fetch("/api/simulator/answer", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ attemptId, questionId, selectedAnswerId: answerId }),
-    }).catch(() => null);
-    if (!response || !response.ok) {
-      setError("No se pudo guardar esta respuesta. Intenta seleccionarla de nuevo.");
-    }
+    // Serializar evita que una petición lenta sobrescriba una elección más reciente.
+    saveQueue.current = saveQueue.current.then(async () => {
+      const controller = new AbortController();
+      const timeout = setTimeout(() => controller.abort(), 10_000);
+      const response = await fetch("/api/simulator/answer", {
+        method: "POST",
+        signal: controller.signal,
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ attemptId, questionId, selectedAnswerId: answerId }),
+      }).catch(() => null);
+      clearTimeout(timeout);
+      if (!response || !response.ok) {
+        setError("No se pudo guardar esta respuesta. Intenta seleccionarla de nuevo.");
+      }
+    });
   }
 
   return (
@@ -202,49 +230,93 @@ export default function SimuladorPage() {
         )}
       </div>
 
+      <SimulatorFormulaSheet />
+
       {!attemptId && !result && (
         <div className="mt-8">
           <p className="text-sm text-ink/60">
-            20 preguntas, 20 minutos. El tiempo se controla en el servidor: si cierras la pestaña
-            y vuelves, tu progreso y el tiempo restante real se recuperan automáticamente.
+            {SIMULATOR_QUESTION_COUNT} preguntas, {SIMULATOR_TIME_LIMIT_SECONDS / 60} minutos.
+            Ejercicios originales de práctica, no una réplica completa del examen oficial. El tiempo
+            se controla en el servidor: si cierras la pestaña y vuelves, tu progreso y el tiempo
+            restante real se recuperan automáticamente.
           </p>
           <button
             onClick={startSimulator}
-            disabled={loading}
+            disabled={loading || recovering}
             className="mt-4 rounded-md bg-pizarron px-4 py-2 text-white transition hover:bg-pizarron/90 disabled:opacity-50"
           >
-            {loading ? "Cargando…" : "Empezar simulador"}
+            {recovering ? "Recuperando progreso…" : loading ? "Cargando…" : "Empezar simulador"}
           </button>
         </div>
       )}
 
-      {error && <p className="mt-4 text-sm text-alerta">{error}</p>}
+      {error && (
+        <p className="mt-4 text-sm text-alerta" role="alert">
+          {error}
+        </p>
+      )}
 
       {questions.length > 0 && (
         <div className="mt-8 flex flex-col gap-8">
           <p className="text-sm text-ink/60" role="status">
             {Object.keys(selected).length} de {questions.length} preguntas respondidas
           </p>
-          {questions.map((q, index) => (
+          <progress
+            aria-label="Preguntas respondidas"
+            className="h-2 w-full accent-pizarron"
+            value={Object.keys(selected).length}
+            max={questions.length}
+          />
+          <label className="flex items-center gap-3 text-sm text-ink/70">
+            Ir a pregunta
+            <select
+              value={currentIndex}
+              onChange={(event) => setCurrentIndex(Number(event.target.value))}
+              className="min-h-11 rounded-md border border-ink/20 bg-white px-3"
+              disabled={loading}
+            >
+              {questions.map((q, index) => (
+                <option key={q.id} value={index}>
+                  {index + 1} de {questions.length}
+                  {selected[q.id] ? " · Respondida" : " · Pendiente"}
+                </option>
+              ))}
+            </select>
+          </label>
+          {questions.slice(currentIndex, currentIndex + 1).map((q) => (
             <fieldset key={q.id} className="rounded-md border border-ink/10 bg-white p-4">
-              <legend className="px-1 text-sm text-ink/50">Pregunta {index + 1}</legend>
+              <legend className="px-1 text-sm text-ink/50">
+                Pregunta {currentIndex + 1} de {questions.length}
+              </legend>
               <p className="font-medium text-ink">{q.text}</p>
-              <div className="mt-3 flex flex-col gap-2">
-                {q.answers.map((a) => (
-                  <label key={a.id} className="flex items-center gap-2 text-sm text-ink/80">
-                    <input
-                      type="radio"
-                      name={q.id}
-                      value={a.id}
-                      checked={selected[q.id] === a.id}
-                      onChange={() => selectAnswer(q.id, a.id)}
-                    />
-                    {a.text}
-                  </label>
-                ))}
-              </div>
+              <SimulatorAnswerBoard
+                questionId={q.id}
+                answers={q.answers}
+                selectedId={selected[q.id]}
+                disabled={loading || remainingSeconds === 0}
+                onSelect={(answerId) => selectAnswer(q.id, answerId)}
+              />
             </fieldset>
           ))}
+
+          <div className="flex justify-between gap-3">
+            <button
+              type="button"
+              disabled={currentIndex === 0 || loading}
+              onClick={() => setCurrentIndex((index) => index - 1)}
+              className="min-h-11 rounded-md border border-ink/20 px-4 text-sm disabled:opacity-40"
+            >
+              Anterior
+            </button>
+            <button
+              type="button"
+              disabled={currentIndex === questions.length - 1 || loading}
+              onClick={() => setCurrentIndex((index) => index + 1)}
+              className="min-h-11 rounded-md border border-ink/20 px-4 text-sm disabled:opacity-40"
+            >
+              Siguiente
+            </button>
+          </div>
 
           <button
             onClick={submitSimulator}

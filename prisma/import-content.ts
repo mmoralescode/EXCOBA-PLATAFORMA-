@@ -87,7 +87,12 @@ async function main() {
             difficulty: "MEDIA",
             status: "PUBLICADO",
             authorId: author.id,
-            tags: ["original", "uaq-2026-2", `demo:${q.demoId}`, `tema:${q.topicId}`],
+            tags: [
+              "original",
+              "uaq-2026-2",
+              ...(q.demoId ? [`demo:${q.demoId}`] : ["simulador-ampliacion-v2"]),
+              `tema:${q.topicId}`,
+            ],
             answers: {
               create: q.options.map((text, order) => ({
                 id: `${q.id}-answer-${order}`,
