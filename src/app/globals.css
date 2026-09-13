@@ -15,6 +15,13 @@ body {
   margin: 0;
 }
 
+.formula-notation math {
+  width: max-content;
+  font-family: "Cambria Math", "STIX Two Math", "Latin Modern Math", math;
+  font-size: 1.15rem;
+  margin: 0;
+}
+
 progress {
   appearance: none;
   border: 0;

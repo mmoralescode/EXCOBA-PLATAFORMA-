@@ -11,6 +11,7 @@
 - Esta entrega mantiene preguntas de respuesta única y calificación existente. No implementa clasificación múltiple, ubicación en imágenes ni crédito parcial del examen oficial.
 - Una pregunta por pantalla, navegación libre, conteo de respondidas y autoguardado serializado. Al entregar se espera a las escrituras pendientes. La API comprueba usuario, pertenencia del reactivo y opción, y califica en el servidor.
 - Formulario plegable con fórmulas, condiciones y unidades; no importa el banco de preguntas ni revela respuestas. Consultarlo no pausa el tiempo.
+- Formulario organizado con selector de materia, una materia visible a la vez y notación MathML nativa: fracciones apiladas, raíces, potencias, subíndices y sumatorias. Conserva los 18 grupos de fórmulas y sus condiciones; no añade librerías, imágenes ni peticiones a terceros. Referencia técnica: [elemento math de MDN](https://developer.mozilla.org/en-US/docs/Web/MathML/Reference/Element/math).
 - No se requiere migración Prisma. La importación existente agrega IDs nuevos de forma idempotente, sin modificar preguntas o respuestas anteriores, folios ni usuarios.
 
 ## Referencia

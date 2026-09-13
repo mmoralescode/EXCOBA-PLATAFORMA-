@@ -76,8 +76,8 @@ export const formulaSheet = [
       ],
       [
         "Cantidad de sustancia",
-        "n = m/Mm · Npartículas = nNₐ",
-        "Mm: masa molar; Nₐ = 6.02214076 × 10²³ mol⁻¹. Usa la precisión indicada en el reactivo.",
+        "n = m/Mₘ · Npartículas = nN_A",
+        "Mₘ: masa molar. La constante de Avogadro vale 6.02214076 × 10²³ mol⁻¹. Usa la precisión indicada en el reactivo.",
       ],
       [
         "Concentración y dilución",
