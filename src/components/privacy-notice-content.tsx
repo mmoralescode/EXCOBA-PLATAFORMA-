@@ -1,24 +1,19 @@
 "use client";
 
-import type { PrivacyNoticeDetails } from "@/lib/privacy-notice";
 import {
   PRIVACY_NOTICE_UPDATED_AT,
   PRIVACY_NOTICE_VERSION,
 } from "@/content/privacy-notice-version";
 
-export function PrivacyNoticeContent({ details }: { details: PrivacyNoticeDetails }) {
+export function PrivacyNoticeContent() {
   return (
     <div className="space-y-6 text-sm leading-6 text-ink/75">
       <section className="space-y-2">
-        <h2 className="font-display text-xl text-pizarron">Responsable y contacto</h2>
+        <h2 className="font-display text-xl text-pizarron">Sobre tus datos</h2>
         <p>
-          <strong>{details.controllerName}</strong>, con domicilio en {details.controllerAddress},
-          es responsable del tratamiento de los datos personales obtenidos mediante Plataforma
-          EXCOBA. Para dudas, solicitudes o para limitar el uso de tus datos, escribe a{" "}
-          <a className="text-pizarron underline" href={`mailto:${details.contactEmail}`}>
-            {details.contactEmail}
-          </a>
-          .
+          Este mensaje explica cómo utiliza tus datos la Plataforma EXCOBA para ofrecerte acceso y
+          acompañar tu estudio. Aceptarlo registra que lo leíste; no implica renunciar a tus
+          derechos de protección de datos.
         </p>
       </section>
 
@@ -50,10 +45,7 @@ export function PrivacyNoticeContent({ details }: { details: PrivacyNoticeDetail
           <li>Prevenir fraude, abuso, accesos no autorizados e incidentes de seguridad.</li>
           <li>Cumplir obligaciones legales y conservar evidencia de operaciones relevantes.</li>
         </ul>
-        <p>
-          No usamos tus datos para publicidad, mercadotecnia ni prospección comercial; por ello no
-          hay finalidades secundarias que debas rechazar.
-        </p>
+        <p>La plataforma no incorpora funciones de publicidad ni seguimiento publicitario.</p>
       </section>
 
       <section className="space-y-2">
@@ -61,35 +53,26 @@ export function PrivacyNoticeContent({ details }: { details: PrivacyNoticeDetail
         <p>
           Utilizamos proveedores que tratan datos por nuestra cuenta para operar la plataforma:
           Vercel, Inc. para alojamiento y seguridad; Neon, Inc. para la base de datos; y Resend,
-          Inc. cuando se habilitan correos transaccionales. No vendemos ni cedemos tus datos a
-          terceros para fines comerciales.
+          Inc. cuando se habilitan correos transaccionales.
         </p>
       </section>
 
       <section className="space-y-2">
         <h2 className="font-display text-xl text-pizarron">Conservación y seguridad</h2>
         <p>
-          Conservamos tus datos mientras tu cuenta y relación con la plataforma estén vigentes y,
-          después, durante los plazos necesarios para atender obligaciones legales, reclamaciones o
-          seguridad. Al finalizar esos plazos se suprimirán o anonimizarán conforme corresponda.
-          Aplicamos controles de acceso, cifrado en tránsito, contraseñas con hash y sesiones
-          revocables.
+          Tu cuenta conserva el historial de prácticas y avance. La plataforma aplica controles de
+          acceso, cifrado en tránsito, contraseñas con hash y sesiones revocables. El vencimiento
+          del folio no elimina automáticamente los registros de tu cuenta.
         </p>
       </section>
 
       <section className="space-y-2">
-        <h2 className="font-display text-xl text-pizarron">Derechos ARCO y limitación de uso</h2>
+        <h2 className="font-display text-xl text-pizarron">Cookies y preferencias</h2>
         <p>
-          Puedes solicitar acceso, rectificación, cancelación u oposición al tratamiento de tus
-          datos, o pedir limitar su uso, escribiendo a {details.contactEmail}. Incluye tu nombre, un
-          medio para recibir respuesta, el derecho que deseas ejercer, una descripción clara de los
-          datos involucrados y evidencia de identidad. Para rectificación, señala además el cambio
-          solicitado y su sustento.
-        </p>
-        <p>
-          Responderemos la solicitud en un máximo de 20 días y, si procede, la haremos efectiva
-          dentro de los 15 días siguientes; los plazos pueden ampliarse una vez cuando la ley lo
-          permita.
+          Utilizamos una cookie para mantener tu sesión y otra para recordar la carrera elegida en
+          este navegador. Puedes eliminarlas desde la configuración del navegador; al hacerlo
+          tendrás que iniciar sesión o seleccionar tu carrera nuevamente. La aceptación de este
+          mensaje queda guardada en tu cuenta, aunque cambies de dispositivo.
         </p>
       </section>
 

@@ -13,13 +13,11 @@ import AlumnoLayout from "../src/app/(alumno)/layout";
 import InstructivoPage from "../src/app/(alumno)/instructivo/page";
 import TemarioPage from "../src/app/(alumno)/temario/page";
 import { ProtectedCurriculumPage } from "../src/components/protected-curriculum-page";
+import { PRIVACY_NOTICE_VERSION } from "../src/content/privacy-notice-version";
 
 beforeEach(() => {
   vi.clearAllMocks();
   vi.stubGlobal("React", React);
-  vi.stubEnv("PRIVACY_CONTROLLER_NAME", "Responsable de prueba");
-  vi.stubEnv("PRIVACY_CONTROLLER_ADDRESS", "Domicilio de prueba");
-  vi.stubEnv("PRIVACY_CONTACT_EMAIL", "privacidad@example.com");
   mocks.session.mockResolvedValue({ id: "alumno-con-sesion-valida" });
   mocks.redirect.mockImplementation((path: string) => {
     throw new Error(`redirect:${path}`);
@@ -31,6 +29,33 @@ afterEach(() => {
 });
 
 describe("Instructivo dentro de la cuenta del alumno", () => {
+  it("muestra el mensaje sin requerir datos de identidad del responsable", async () => {
+    const html = renderToStaticMarkup(await AlumnoLayout({ children: "contenido" }));
+    expect(html).toContain('id="privacy-notice-title"');
+    expect(html).toContain("He leído y acepto este mensaje");
+  });
+  it("deja de mostrar el mensaje para una cuenta que ya lo aceptó", async () => {
+    mocks.session.mockResolvedValue({
+      id: "user-1",
+      privacyNoticeAcceptedAt: new Date(),
+      privacyNoticeVersion: PRIVACY_NOTICE_VERSION,
+    });
+    for (let visit = 0; visit < 2; visit++) {
+      const html = renderToStaticMarkup(await AlumnoLayout({ children: "contenido" }));
+      expect(html).not.toContain('id="privacy-notice-title"');
+      expect(html).toContain('href="/privacidad"');
+    }
+  });
+  it("vuelve a mostrar únicamente versiones nuevas o registros incompletos", async () => {
+    for (const record of [
+      { privacyNoticeAcceptedAt: new Date(), privacyNoticeVersion: "anterior" },
+      { privacyNoticeAcceptedAt: null, privacyNoticeVersion: PRIVACY_NOTICE_VERSION },
+    ]) {
+      mocks.session.mockResolvedValue({ id: "user-1", ...record });
+      const html = renderToStaticMarkup(await AlumnoLayout({ children: "contenido" }));
+      expect(html).toContain('id="privacy-notice-title"');
+    }
+  });
   it.each([
     ["/instructivo", InstructivoPage],
     ["/temario", TemarioPage],

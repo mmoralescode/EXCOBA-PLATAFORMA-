@@ -16,11 +16,31 @@ export async function acceptPrivacyNotice(userId: string) {
   }
 
   const acceptedAt = new Date();
-  await db.$transaction(async (tx) => {
-    await tx.user.update({
-      where: { id: userId },
+  return db.$transaction(async (tx) => {
+    const updated = await tx.user.updateMany({
+      where: {
+        id: userId,
+        OR: [
+          { privacyNoticeAcceptedAt: null },
+          { privacyNoticeVersion: null },
+          { privacyNoticeVersion: { not: PRIVACY_NOTICE_VERSION } },
+        ],
+      },
       data: { privacyNoticeAcceptedAt: acceptedAt, privacyNoticeVersion: PRIVACY_NOTICE_VERSION },
     });
+    if (updated.count === 0) {
+      const current = await tx.user.findUnique({
+        where: { id: userId },
+        select: { privacyNoticeAcceptedAt: true, privacyNoticeVersion: true },
+      });
+      if (
+        !current?.privacyNoticeAcceptedAt ||
+        current.privacyNoticeVersion !== PRIVACY_NOTICE_VERSION
+      ) {
+        throw new PrivacyNoticeAcceptanceError();
+      }
+      return { acceptedAt: current.privacyNoticeAcceptedAt, alreadyAccepted: true };
+    }
     await tx.auditLog.create({
       data: {
         actorId: userId,
@@ -30,9 +50,8 @@ export async function acceptPrivacyNotice(userId: string) {
         metadata: { version: PRIVACY_NOTICE_VERSION },
       },
     });
+    return { acceptedAt, alreadyAccepted: false };
   });
-
-  return { acceptedAt, alreadyAccepted: false };
 }
 
 export class PrivacyNoticeAcceptanceError extends Error {}

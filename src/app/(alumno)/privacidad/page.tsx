@@ -1,5 +1,4 @@
 import { PrivacyNoticeContent } from "@/components/privacy-notice-content";
-import { privacyNoticeDetails } from "@/lib/privacy-notice";
 
 export default function PrivacidadPage() {
   return (
@@ -9,10 +8,10 @@ export default function PrivacidadPage() {
       </p>
       <h1 className="mt-2 font-display text-3xl text-pizarron">Aviso de privacidad</h1>
       <p className="mt-3 text-sm leading-6 text-ink/70">
-        Consulta la versión vigente del aviso de privacidad de la plataforma.
+        Mensaje informativo sobre el uso de tus datos en la plataforma.
       </p>
       <div className="mt-8 rounded-xl border border-ink/10 bg-white p-5 sm:p-6">
-        <PrivacyNoticeContent details={privacyNoticeDetails()} />
+        <PrivacyNoticeContent />
       </div>
     </main>
   );
