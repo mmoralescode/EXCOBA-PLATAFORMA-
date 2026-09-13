@@ -1,6 +1,10 @@
 # Simulador ampliado
 
 - 60 preguntas por intento y 60 minutos; intentos anteriores conservan su configuración.
+- Formatos mixtos: opción múltiple por defecto, arrastre en Historia y Biología y hasta dos preguntas de Geometría y dos de Física por intento. Se reserva variedad mientras existan preguntas nuevas de esas áreas; no se repiten reactivos para cubrir una cuota.
+- El formato se guarda en `Attempt.config.answerModes` y se recupera sin alterarlo al recargar.
+- Sin repeticiones por alumno: se excluyen todos los IDs asignados en sus simuladores anteriores, incluyendo incompletos y expirados. Las prácticas no consumen este banco de examen. Se consulta también el historial anterior a este cambio.
+- La asignación usa transacción y bloqueo de la fila del usuario para evitar repeticiones entre solicitudes simultáneas. No se borra historial ni se reinicia el banco automáticamente. Con 158 reactivos, un alumno nuevo puede iniciar dos exámenes completos de 60; quedan 38 hasta ampliar el banco.
 - Banco: 118 preguntas anteriores + 40 originales nuevas en `src/content/simulator-expansion.json` (14 de Matemáticas, 13 de Física y 13 de Química).
 - Cada pregunta nueva referencia un apartado real del temario. `demoId` vacío indica que no se atribuye a un reactivo del demo oficial.
 - Arrastre de una opción a un recuadro mediante eventos de puntero (ratón, pantalla táctil o lápiz). Alternativa con toque, clic o Tab + Enter/Espacio. Permite reemplazar y quitar la elección.

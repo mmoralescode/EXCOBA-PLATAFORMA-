@@ -1,5 +1,6 @@
 import { z } from "zod";
 import { db } from "@/db/client";
+import { recoverAnswerMode } from "./simulator-formats";
 import { getRemainingSeconds, parseSimulatorConfig } from "@/server/use-cases/simulator-rules";
 
 export const SaveSimulatorAnswerSchema = z.object({
@@ -74,6 +75,7 @@ export async function getSimulatorState(attemptId: string, userId: string) {
       id: true,
       text: true,
       subjectId: true,
+      topicId: true,
       answers: { select: { id: true, text: true } },
     },
   });
@@ -85,7 +87,9 @@ export async function getSimulatorState(attemptId: string, userId: string) {
     remainingSeconds: getRemainingSeconds(attempt.startedAt, config),
     questions: config.questionIds.flatMap((questionId) => {
       const question = questionsById.get(questionId);
-      return question ? [question] : [];
+      return question
+        ? [{ ...question, answerMode: recoverAnswerMode(attempt.config, question) }]
+        : [];
     }),
     savedAnswers,
   };

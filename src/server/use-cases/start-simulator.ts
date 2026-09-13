@@ -1,6 +1,11 @@
 import { z } from "zod";
 import { db } from "@/db/client";
 import {
+  assignAnswerModes,
+  selectMixedQuestions,
+  usedSimulatorQuestionIds,
+} from "./simulator-formats";
+import {
   SIMULATOR_QUESTION_COUNT,
   SIMULATOR_TIME_LIMIT_SECONDS,
 } from "@/content/simulator-settings";
@@ -22,43 +27,71 @@ export const StartSimulatorSchema = z.object({
 export async function startSimulator(input: z.infer<typeof StartSimulatorSchema>) {
   const data = StartSimulatorSchema.parse(input);
 
-  const candidates = await db.question.findMany({
-    where: {
-      status: "PUBLICADO",
-      deletedAt: null,
-      answers: { some: {} },
-      subjectId: data.subjectIds ? { in: data.subjectIds } : undefined,
-    },
-    select: {
-      id: true,
-      text: true,
-      difficulty: true,
-      subjectId: true,
-      answers: { select: { id: true, text: true } },
-    },
-  });
+  // Serializa la asignación por alumno: dos pestañas no pueden reservar el mismo reactivo.
+  return db.$transaction(
+    async (tx) => {
+      const user = await tx.$queryRaw<
+        Array<{ id: string }>
+      >`SELECT "id" FROM "User" WHERE "id" = ${data.userId} FOR UPDATE`;
+      if (!user.length) throw new SimulatorStartError("Usuario no encontrado.");
+      const history = await tx.attempt.findMany({
+        where: { userId: data.userId, type: "SIMULADOR" },
+        select: { config: true, answers: { select: { questionId: true } } },
+      });
+      const usedIds = usedSimulatorQuestionIds(history);
 
-  const selected = shuffle(candidates).slice(0, data.questionCount);
-  if (selected.length < data.questionCount) {
-    throw new SimulatorStartError(
-      `No hay suficientes preguntas publicadas para iniciar un simulador de ${data.questionCount} preguntas.`,
-    );
-  }
+      const candidates = await tx.question.findMany({
+        where: {
+          id: { notIn: usedIds },
+          status: "PUBLICADO",
+          deletedAt: null,
+          answers: { some: {} },
+          subjectId: data.subjectIds ? { in: data.subjectIds } : undefined,
+        },
+        select: {
+          id: true,
+          text: true,
+          difficulty: true,
+          subjectId: true,
+          topicId: true,
+          answers: { select: { id: true, text: true } },
+        },
+      });
 
-  const attempt = await db.attempt.create({
-    data: {
-      userId: data.userId,
-      type: "SIMULADOR",
-      config: { timeLimitSeconds: data.timeLimitSeconds, questionIds: selected.map((q) => q.id) },
+      const selected = selectMixedQuestions(shuffle(candidates), data.questionCount);
+      if (selected.length < data.questionCount) {
+        throw new SimulatorStartError(
+          `Quedan ${candidates.length} preguntas nuevas disponibles para esta selección. Se necesitan ${data.questionCount} para otro simulador sin repetir. Hace falta ampliar el banco; puedes continuar en Práctica.`,
+        );
+      }
+
+      const answerModes = assignAnswerModes(selected);
+      const ordered = shuffle(selected);
+      const attempt = await tx.attempt.create({
+        data: {
+          userId: data.userId,
+          type: "SIMULADOR",
+          config: {
+            timeLimitSeconds: data.timeLimitSeconds,
+            questionIds: ordered.map((q) => q.id),
+            answerModes,
+          },
+        },
+      });
+
+      return {
+        attemptId: attempt.id,
+        startedAt: attempt.startedAt,
+        timeLimitSeconds: data.timeLimitSeconds,
+        questions: ordered.map((q) => ({
+          ...q,
+          answerMode: answerModes[q.id],
+          answers: shuffle(q.answers),
+        })),
+      };
     },
-  });
-
-  return {
-    attemptId: attempt.id,
-    startedAt: attempt.startedAt,
-    timeLimitSeconds: data.timeLimitSeconds,
-    questions: selected.map((q) => ({ ...q, answers: shuffle(q.answers) })),
-  };
+    { timeout: 30_000, isolationLevel: "ReadCommitted" },
+  );
 }
 
 function shuffle<T>(items: T[]): T[] {

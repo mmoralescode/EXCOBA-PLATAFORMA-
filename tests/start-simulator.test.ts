@@ -6,9 +6,13 @@ const mocks = vi.hoisted(() => ({
   findQuestion: vi.fn(),
   savedAnswers: vi.fn(),
   upsertAnswer: vi.fn(),
+  transaction: vi.fn(),
+  lock: vi.fn(),
+  history: vi.fn(),
 }));
 vi.mock("../src/db/client", () => ({
   db: {
+    $transaction: mocks.transaction,
     question: { findMany: mocks.findQuestions, findUnique: mocks.findQuestion },
     attempt: { create: mocks.createAttempt, findUnique: mocks.findAttempt },
     attemptAnswer: { findMany: mocks.savedAnswers, upsert: mocks.upsertAnswer },
@@ -18,6 +22,15 @@ import { startSimulator, StartSimulatorSchema } from "../src/server/use-cases/st
 import { saveSimulatorAnswer, getSimulatorState } from "../src/server/use-cases/simulator-state";
 beforeEach(() => {
   vi.resetAllMocks();
+  mocks.lock.mockResolvedValue([{ id: "student" }]);
+  mocks.history.mockResolvedValue([]);
+  mocks.transaction.mockImplementation(async (callback) =>
+    callback({
+      $queryRaw: mocks.lock,
+      question: { findMany: mocks.findQuestions },
+      attempt: { findMany: mocks.history, create: mocks.createAttempt },
+    }),
+  );
   mocks.createAttempt.mockResolvedValue({ id: "attempt-60", startedAt: new Date() });
   mocks.findAttempt.mockResolvedValue({
     id: "attempt-60",
@@ -53,9 +66,67 @@ describe("Sesiones ampliadas del simulador", () => {
   it("no inicia si no hay suficientes preguntas", async () => {
     mocks.findQuestions.mockResolvedValue([]);
     await expect(startSimulator(StartSimulatorSchema.parse({ userId: "student" }))).rejects.toThrow(
-      "No hay suficientes",
+      "Quedan 0 preguntas nuevas",
     );
     expect(mocks.createAttempt).not.toHaveBeenCalled();
+  });
+  it("excluye todo lo asignado anteriormente, aun sin respuestas guardadas", async () => {
+    mocks.history.mockResolvedValue([
+      { config: { questionIds: ["used-unanswered"] }, answers: [] },
+      { config: null, answers: [{ questionId: "legacy-answered" }] },
+    ]);
+    mocks.findQuestions.mockResolvedValue([]);
+    await expect(startSimulator(StartSimulatorSchema.parse({ userId: "student" }))).rejects.toThrow(
+      "sin repetir",
+    );
+    expect(mocks.history).toHaveBeenCalledWith({
+      where: { userId: "student", type: "SIMULADOR" },
+      select: { config: true, answers: { select: { questionId: true } } },
+    });
+    expect(mocks.findQuestions.mock.calls[0]![0].where.id.notIn).toEqual([
+      "used-unanswered",
+      "legacy-answered",
+    ]);
+    expect(mocks.lock.mock.calls[0]![0].join(" ")).toContain("FOR UPDATE");
+    expect(mocks.lock.mock.calls[0]![1]).toBe("student");
+  });
+
+  it("dos inicios concurrentes reservan conjuntos distintos y el siguiente avisa agotamiento", async () => {
+    const history: Array<{ config: { questionIds: string[] }; answers: [] }> = [];
+    const bank = Array.from({ length: 158 }, (_, i) => ({ id: `q${i}`, answers: [] }));
+    let queue = Promise.resolve();
+    mocks.transaction.mockImplementation((callback) => {
+      const run = queue.then(() =>
+        callback({
+          $queryRaw: mocks.lock,
+          question: { findMany: mocks.findQuestions },
+          attempt: { findMany: mocks.history, create: mocks.createAttempt },
+        }),
+      );
+      queue = run.then(
+        () => undefined,
+        () => undefined,
+      );
+      return run;
+    });
+    mocks.history.mockImplementation(async () => [...history]);
+    mocks.findQuestions.mockImplementation(async ({ where }) =>
+      bank.filter((q) => !where.id.notIn.includes(q.id)),
+    );
+    mocks.createAttempt.mockImplementation(async ({ data }) => {
+      history.push({ config: data.config, answers: [] });
+      return { id: `attempt-${history.length}`, startedAt: new Date() };
+    });
+    const [first, second] = await Promise.all(
+      [1, 2].map(() => startSimulator(StartSimulatorSchema.parse({ userId: "student" }))),
+    );
+    const firstIds = new Set(first!.questions.map((q) => q.id));
+    expect(second!.questions.some((q) => firstIds.has(q.id))).toBe(false);
+    expect(history).toHaveLength(2);
+    await expect(startSimulator(StartSimulatorSchema.parse({ userId: "student" }))).rejects.toThrow(
+      "Quedan 38 preguntas nuevas",
+    );
+    expect(history).toHaveLength(2);
   });
   it("guarda y elimina la respuesta arrastrada usando los mismos IDs", async () => {
     mocks.findQuestion.mockResolvedValue({ answers: [{ id: "a1" }] });

@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState, useCallback } from "react";
-import { SimulatorAnswerBoard } from "@/components/simulator-answer-board";
+import { SimulatorQuestionAnswer } from "@/components/simulator-question-answer";
 import { SimulatorFormulaSheet } from "@/components/simulator-formula-sheet";
 import {
   SIMULATOR_QUESTION_COUNT,
@@ -14,6 +14,7 @@ interface Answer {
 }
 
 interface Question {
+  answerMode?: "MULTIPLE_CHOICE" | "DRAG_DROP";
   id: string;
   text: string;
   subjectId: string;
@@ -240,6 +241,11 @@ export default function SimuladorPage() {
             se controla en el servidor: si cierras la pestaña y vuelves, tu progreso y el tiempo
             restante real se recuperan automáticamente.
           </p>
+          <p className="mt-3 text-sm text-ink/60">
+            Combina opción múltiple con arrastre en Historia, Biología y algunas preguntas de
+            Geometría y Física. No se reutilizan preguntas de tus intentos anteriores, aunque no los
+            hayas terminado. Si quedan menos de 60 nuevas, deberás esperar a que ampliemos el banco.
+          </p>
           <button
             onClick={startSimulator}
             disabled={loading || recovering}
@@ -289,7 +295,8 @@ export default function SimuladorPage() {
                 Pregunta {currentIndex + 1} de {questions.length}
               </legend>
               <p className="font-medium text-ink">{q.text}</p>
-              <SimulatorAnswerBoard
+              <SimulatorQuestionAnswer
+                answerMode={q.answerMode}
                 questionId={q.id}
                 answers={q.answers}
                 selectedId={selected[q.id]}
