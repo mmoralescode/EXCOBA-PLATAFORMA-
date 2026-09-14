@@ -1,12 +1,14 @@
 "use client";
 
-import { useState, FormEvent } from "react";
+import { useEffect, useState, FormEvent } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
+import { RecoveryCodeDisplay } from "@/components/recovery-code-display";
 
 export default function ActivarPage() {
   const router = useRouter();
-  const [step, setStep] = useState<"folio" | "registro">("folio");
+  const [step, setStep] = useState<"folio" | "registro" | "recovery">("folio");
+  const [recoveryCode, setRecoveryCode] = useState<string | null>(null);
   const [folio, setFolio] = useState("");
   const [licenseId, setLicenseId] = useState<string | null>(null);
   const [validityMonths, setValidityMonths] = useState<number | null>(null);
@@ -18,6 +20,15 @@ export default function ActivarPage() {
 
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
+
+  useEffect(() => {
+    const clearSecrets = () => {
+      setRecoveryCode(null);
+      setPassword("");
+    };
+    window.addEventListener("pagehide", clearSecrets);
+    return () => window.removeEventListener("pagehide", clearSecrets);
+  }, []);
 
   async function handleValidateFolio(event: FormEvent) {
     event.preventDefault();
@@ -59,6 +70,7 @@ export default function ActivarPage() {
       const response = await fetch("/api/auth/register", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
+        cache: "no-store",
         body: JSON.stringify({
           name: name.trim(),
           email: email.trim(),
@@ -74,9 +86,15 @@ export default function ActivarPage() {
         return;
       }
 
-      // El registro no inicia sesión automáticamente; lo mandamos a login
-      // con el correo pre-cargado sería una mejora futura de UX.
-      router.push("/login");
+      const data = await response.json().catch(() => ({}));
+      setPassword("");
+      setFolio("");
+      setRecoveryCode(
+        typeof data.recoveryCode === "string" && data.recoveryCode ? data.recoveryCode : null,
+      );
+      // Registration does not start a session. First let the student save the one-time secret.
+      // A successful registration must not be retried if its response is incomplete.
+      setStep("recovery");
     } catch {
       setError("No se pudo conectar con el servidor. Intenta de nuevo.");
     } finally {
@@ -90,12 +108,18 @@ export default function ActivarPage() {
         Plataforma EXCOBA
       </p>
       <h1 className="mt-2 font-display text-3xl text-pizarron">
-        {step === "folio" ? "Activa tu folio" : "Crea tu cuenta"}
+        {step === "folio"
+          ? "Activa tu folio"
+          : step === "registro"
+            ? "Crea tu cuenta"
+            : "Tu cuenta está lista"}
       </h1>
       <p className="mt-2 text-sm text-ink/60">
         {step === "folio"
           ? "Ingresa el folio que recibiste para comenzar."
-          : "Tu folio es válido. Completa tus datos para terminar."}
+          : step === "registro"
+            ? "Tu folio es válido. Completa tus datos para terminar."
+            : "Guarda tu código de recuperación antes de iniciar sesión."}
       </p>
 
       {step === "folio" && (
@@ -227,9 +251,36 @@ export default function ActivarPage() {
         </form>
       )}
 
-      <Link href="/login" className="mt-6 text-sm text-ink/60 hover:text-pizarron">
-        Ya tengo cuenta — iniciar sesión
-      </Link>
+      {step === "recovery" ? (
+        <div className="mt-6">
+          {recoveryCode ? (
+            <RecoveryCodeDisplay
+              code={recoveryCode}
+              onSaved={() => {
+                setRecoveryCode(null);
+                router.push("/login");
+              }}
+            />
+          ) : (
+            <div className="space-y-4 text-sm leading-6 text-ink/70">
+              <p role="status">
+                Tu cuenta ya se creó. El código no está disponible en esta pantalla; inicia sesión
+                con la contraseña que elegiste y genera uno nuevo desde tu perfil.
+              </p>
+              <Link
+                href="/login"
+                className="inline-flex min-h-11 items-center rounded-md bg-pizarron px-4 py-2 text-white"
+              >
+                Iniciar sesión
+              </Link>
+            </div>
+          )}
+        </div>
+      ) : (
+        <Link href="/login" className="mt-6 text-sm text-ink/60 hover:text-pizarron">
+          Ya tengo cuenta — iniciar sesión
+        </Link>
+      )}
     </main>
   );
 }

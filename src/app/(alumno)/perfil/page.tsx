@@ -4,6 +4,7 @@ import { subjectNames } from "@/content/subject-catalog";
 import { db } from "@/db/client";
 import { getStudyRecommendations } from "@/server/use-cases/study-priority";
 import { formatLicenseDate, licenseExpiryLabel } from "@/components/license-validity";
+import { RecoveryCodeSettings } from "@/components/recovery-code-settings";
 
 const PRIORITY_LABEL: Record<string, string> = {
   ALTA: "Prioridad alta",
@@ -67,6 +68,8 @@ export default async function PerfilPage() {
           <p className="mt-3 text-sm text-ink/60">No se encontró una licencia asociada.</p>
         )}
       </section>
+
+      <RecoveryCodeSettings />
 
       <section className="mt-8">
         <h2 className="font-display text-lg text-pizarron">Qué estudiar hoy</h2>

@@ -18,7 +18,17 @@ export async function POST(request: NextRequest) {
   try {
     const body = RegisterInputSchema.parse(await readAuthJson(request));
     const user = await registerUser(body);
-    return NextResponse.json({ id: user.id, email: user.email }, { status: 201 });
+    return NextResponse.json(
+      { id: user.id, email: user.email, recoveryCode: user.recoveryCode },
+      {
+        status: 201,
+        headers: {
+          "Cache-Control": "private, no-store",
+          Pragma: "no-cache",
+          "Referrer-Policy": "no-referrer",
+        },
+      },
+    );
   } catch (error) {
     if (error instanceof ZodError || error instanceof AuthRequestError) {
       return NextResponse.json({ error: "Datos inválidos." }, { status: 400 });

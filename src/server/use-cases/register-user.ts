@@ -3,6 +3,7 @@ import { Prisma } from "@prisma/client";
 import { db } from "@/db/client";
 import { hashPassword } from "@/lib/security/password";
 import { hashToken } from "@/lib/security/tokens";
+import { generateRecoveryCode, hashRecoveryCode } from "@/lib/security/recovery-code";
 import { isLicenseAvailableForActivation, licenseActivationDates } from "@/lib/license-validity";
 
 export const RegisterInputSchema = z.object({
@@ -24,15 +25,12 @@ export async function registerUser(input: RegisterInput) {
   const codeHash = hashToken(data.folio);
   // Slow hashing stays outside the transaction; eligibility is checked after it.
   const passwordHash = await hashPassword(data.password);
+  const recoveryCode = generateRecoveryCode();
 
   try {
     return await db.$transaction(async (tx) => {
       const license = await tx.license.findUnique({ where: { id: data.licenseId } });
-      if (
-        !license ||
-        license.codeHash !== codeHash ||
-        !isLicenseAvailableForActivation(license)
-      ) {
+      if (!license || license.codeHash !== codeHash || !isLicenseAvailableForActivation(license)) {
         throw new RegisterError(REGISTRATION_ERROR);
       }
       const alumnoRole = await tx.role.findUniqueOrThrow({ where: { name: "ALUMNO" } });
@@ -40,6 +38,8 @@ export async function registerUser(input: RegisterInput) {
         data: {
           email: data.email,
           passwordHash,
+          recoveryCodeHash: hashRecoveryCode(recoveryCode),
+          recoveryCodeCreatedAt: new Date(),
           name: data.name,
           roles: { create: { roleId: alumnoRole.id } },
         },
@@ -76,7 +76,7 @@ export async function registerUser(input: RegisterInput) {
           reason: "Registro de alumno completado.",
         },
       });
-      return created;
+      return { id: created.id, email: created.email, recoveryCode };
     });
   } catch (error) {
     // The email unique constraint also handles simultaneous registrations.

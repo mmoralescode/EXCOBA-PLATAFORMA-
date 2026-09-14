@@ -163,7 +163,7 @@ describe("confirmación atómica y de un solo uso", () => {
     await resetPassword({ token, newPassword: "new-password-123" });
     expect(mock.updateUser).toHaveBeenCalledWith({
       where: { id: user.id, status: "ACTIVO", deletedAt: null, passwordHash: "old-hash" },
-      data: { passwordHash: "new-hash" },
+      data: { passwordHash: "new-hash", recoveryCodeUsedAt: now },
     });
     expect(mock.updateToken).toHaveBeenNthCalledWith(1, {
       where: { id: "reset-1", tokenHash: hashToken(token), usedAt: null, expiresAt: { gt: now } },

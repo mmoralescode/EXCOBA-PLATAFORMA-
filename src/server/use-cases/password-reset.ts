@@ -113,7 +113,7 @@ export async function resetPassword(input: z.input<typeof ResetPasswordSchema>) 
         deletedAt: null,
         passwordHash: resetToken.user.passwordHash,
       },
-      data: { passwordHash },
+      data: { passwordHash, recoveryCodeUsedAt: new Date() },
     });
     if (changed.count !== 1) throw new ResetPasswordError();
     const now = new Date();

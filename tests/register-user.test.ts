@@ -6,17 +6,25 @@ vi.mock("@/db/client", () => ({ db: { $transaction: mocks.transaction } }));
 vi.mock("@/lib/security/password", () => ({ hashPassword: mocks.password }));
 import { registerUser, RegisterInputSchema } from "@/server/use-cases/register-user";
 import { hashToken } from "@/lib/security/tokens";
+import { hashRecoveryCode, isRecoveryCode } from "@/lib/security/recovery-code";
 
 const folio = "EXCOBA-AAAA-BBBB-CCCC-DDDD";
 const licenseId = "00000000-0000-4000-8000-000000000002";
 const now = new Date("2026-08-31T15:04:05.123Z");
 const input = {
-  name: "Student", email: "Student@Example.test", password: "a-secure-password",
-  licenseId, folio,
+  name: "Student",
+  email: "Student@Example.test",
+  password: "a-secure-password",
+  licenseId,
+  folio,
 };
 type StoredLicense = ActivationLicense & { id: string; codeHash: string };
 type UserData = {
-  email: string; passwordHash: string; name: string;
+  recoveryCodeHash: string;
+  recoveryCodeCreatedAt: Date;
+  email: string;
+  passwordHash: string;
+  name: string;
   roles: { create: { roleId: string } };
 };
 type StoredUser = UserData & { id: string };
@@ -24,9 +32,14 @@ type DatePredicate = Date | null | { gt?: Date; lte?: Date };
 type DateFilter = { expiresAt?: DatePredicate; startsAt?: DatePredicate };
 type Claim = {
   where: {
-    id: string; codeHash: string; userId?: null; activatedAt?: null;
-    status: { in: string[] }; validityMonths?: number | null;
-    startsAt?: Date | null; expiresAt?: Date | null;
+    id: string;
+    codeHash: string;
+    userId?: null;
+    activatedAt?: null;
+    status: { in: string[] };
+    validityMonths?: number | null;
+    startsAt?: Date | null;
+    expiresAt?: Date | null;
     AND?: { OR: DateFilter[] }[];
   };
   data: Partial<StoredLicense>;
@@ -34,13 +47,24 @@ type Claim = {
 const sameDate = (a: Date | null | undefined, b: Date | null | undefined) =>
   a?.getTime() === b?.getTime();
 
-function fakeDatabase(options: {
-  license?: Partial<StoredLicense>; synchronizeReads?: boolean;
-  afterUserCreate?: () => void; eventFailure?: boolean; emailCollision?: boolean;
-} = {}) {
+function fakeDatabase(
+  options: {
+    license?: Partial<StoredLicense>;
+    synchronizeReads?: boolean;
+    afterUserCreate?: () => void;
+    eventFailure?: boolean;
+    emailCollision?: boolean;
+  } = {},
+) {
   let license: StoredLicense = {
-    id: licenseId, codeHash: hashToken(folio), userId: null, status: "CREADA",
-    startsAt: null, activatedAt: null, expiresAt: null, validityMonths: 6,
+    id: licenseId,
+    codeHash: hashToken(folio),
+    userId: null,
+    status: "CREADA",
+    startsAt: null,
+    activatedAt: null,
+    expiresAt: null,
+    validityMonths: 6,
     ...options.license,
   };
   const users: StoredUser[] = [];
@@ -49,14 +73,18 @@ function fakeDatabase(options: {
   let readCount = 0;
   let nextId = 0;
   let releaseReads!: () => void;
-  const readsReady = new Promise<void>((resolve) => { releaseReads = resolve; });
+  const readsReady = new Promise<void>((resolve) => {
+    releaseReads = resolve;
+  });
   const event = vi.fn();
 
   const matchesDate = (value: Date | null, predicate: DatePredicate) => {
     if (predicate === null || predicate instanceof Date) return sameDate(value, predicate);
-    return Boolean(value &&
+    return Boolean(
+      value &&
       (!predicate.gt || value > predicate.gt) &&
-      (!predicate.lte || value <= predicate.lte));
+      (!predicate.lte || value <= predicate.lte),
+    );
   };
   mocks.transaction.mockImplementation(async (callback) => {
     const pendingUsers: StoredUser[] = [];
@@ -78,17 +106,21 @@ function fakeDatabase(options: {
           claims.push(claim);
           const where = claim.where;
           const eligible =
-            where.id === license.id && where.codeHash === license.codeHash &&
+            where.id === license.id &&
+            where.codeHash === license.codeHash &&
             (where.userId !== null || license.userId === null) &&
             (where.activatedAt !== null || license.activatedAt === null) &&
             where.status.in.includes(license.status) &&
             where.validityMonths === license.validityMonths &&
             sameDate(where.startsAt, license.startsAt) &&
             sameDate(where.expiresAt, license.expiresAt) &&
-            (where.AND ?? []).every((and) => and.OR.some((or) =>
-              (or.expiresAt === undefined || matchesDate(license.expiresAt, or.expiresAt)) &&
-              (or.startsAt === undefined || matchesDate(license.startsAt, or.startsAt)),
-            ));
+            (where.AND ?? []).every((and) =>
+              and.OR.some(
+                (or) =>
+                  (or.expiresAt === undefined || matchesDate(license.expiresAt, or.expiresAt)) &&
+                  (or.startsAt === undefined || matchesDate(license.startsAt, or.startsAt)),
+              ),
+            );
           if (!eligible) return { count: 0 };
           original = { ...license };
           license = { ...license, ...claim.data };
@@ -99,21 +131,26 @@ function fakeDatabase(options: {
       role: { findUniqueOrThrow: vi.fn(async () => ({ id: "role-alumno", name: "ALUMNO" })) },
       user: {
         create: vi.fn(async ({ data }: { data: UserData }) => {
-          if (options.emailCollision) throw new Prisma.PrismaClientKnownRequestError(
-            "Unique email", { code: "P2002", clientVersion: "test", meta: { target: ["email"] } },
-          );
-          const created = { ...data, id: "user-" + (++nextId) };
+          if (options.emailCollision)
+            throw new Prisma.PrismaClientKnownRequestError("Unique email", {
+              code: "P2002",
+              clientVersion: "test",
+              meta: { target: ["email"] },
+            });
+          const created = { ...data, id: "user-" + ++nextId };
           pendingUsers.push(created);
           options.afterUserCreate?.();
           return created;
         }),
       },
-      licenseEvent: { create: vi.fn(async (args: unknown) => {
-        event(args);
-        if (options.eventFailure) throw new Error("Event write failed");
-        pendingEvents.push(args);
-        return args;
-      }) },
+      licenseEvent: {
+        create: vi.fn(async (args: unknown) => {
+          event(args);
+          if (options.eventFailure) throw new Error("Event write failed");
+          pendingEvents.push(args);
+          return args;
+        }),
+      },
     };
     try {
       const result = await callback(tx);
@@ -142,8 +179,9 @@ describe("Registro con reclamo exclusivo de licencia", () => {
     expect(ignored).toBe(folio);
     expect(RegisterInputSchema.safeParse(withoutSecret).success).toBe(false);
     const store = fakeDatabase();
-    await expect(registerUser({ ...input, folio: "EXCOBA-WRNG-WRNG-WRNG-WRNG" }))
-      .rejects.toThrow("No fue posible completar");
+    await expect(registerUser({ ...input, folio: "EXCOBA-WRNG-WRNG-WRNG-WRNG" })).rejects.toThrow(
+      "No fue posible completar",
+    );
     expect(store.users).toHaveLength(0);
     expect(store.claims).toHaveLength(0);
   });
@@ -152,14 +190,26 @@ describe("Registro con reclamo exclusivo de licencia", () => {
     const store = fakeDatabase();
     const user = await registerUser({ ...input, folio: "  " + folio.toLowerCase() + "  " });
     expect(user.email).toBe("student@example.test");
+    expect(isRecoveryCode(user.recoveryCode)).toBe(true);
+    expect(store.users[0]!.recoveryCodeHash).toBe(hashRecoveryCode(user.recoveryCode));
+    expect(store.users[0]!.recoveryCodeCreatedAt).toEqual(now);
+    expect(JSON.stringify(store.users)).not.toContain(user.recoveryCode);
+    expect(user).not.toHaveProperty("passwordHash");
+    expect(user).not.toHaveProperty("recoveryCodeHash");
     expect(store.users[0]!.roles).toEqual({ create: { roleId: "role-alumno" } });
     expect(store.license()).toMatchObject({
-      userId: user.id, status: "ACTIVADA", activatedAt: now, startsAt: now,
+      userId: user.id,
+      status: "ACTIVADA",
+      activatedAt: now,
+      startsAt: now,
       expiresAt: new Date("2027-02-28T15:04:05.123Z"),
     });
     expect(store.events).toHaveLength(1);
     expect(store.claims[0]!.where).toMatchObject({
-      id: licenseId, codeHash: hashToken(folio), userId: null, activatedAt: null,
+      id: licenseId,
+      codeHash: hashToken(folio),
+      userId: null,
+      activatedAt: null,
       status: { in: ["CREADA", "ASIGNADA"] },
     });
     expect(JSON.stringify(store.users)).not.toContain(folio);
@@ -242,6 +292,8 @@ describe("Registro con reclamo exclusivo de licencia", () => {
   });
 
   it("limita las contraseñas a 128 caracteres", () => {
-    expect(RegisterInputSchema.safeParse({ ...input, password: "x".repeat(129) }).success).toBe(false);
+    expect(RegisterInputSchema.safeParse({ ...input, password: "x".repeat(129) }).success).toBe(
+      false,
+    );
   });
 });

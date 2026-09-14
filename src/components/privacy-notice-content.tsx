@@ -21,7 +21,11 @@ export function PrivacyNoticeContent() {
         <h2 className="font-display text-xl text-pizarron">Datos que tratamos</h2>
         <ul className="list-disc space-y-1 pl-5">
           <li>Identidad y contacto: nombre completo y correo electrónico.</li>
-          <li>Acceso: contraseña en formato hash, sesiones y agente de navegador.</li>
+          <li>
+            Acceso: contraseña y código de recuperación en formato hash, fechas de generación y uso
+            del código, sesiones y agente de navegador. No conservamos tu código de recuperación en
+            texto legible.
+          </li>
           <li>Licencia: hash del folio, últimos cuatro caracteres, estado y vigencia.</li>
           <li>
             Uso académico: carrera seleccionada, ejercicios contestados, resultados, avance y

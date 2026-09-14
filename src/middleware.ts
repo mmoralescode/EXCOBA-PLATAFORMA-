@@ -33,6 +33,7 @@ export const PUBLIC_API_PATHS = [
   "/api/auth/register",
   "/api/auth/forgot-password",
   "/api/auth/reset-password",
+  "/api/auth/recover-with-code",
   "/api/licenses/activate",
 ] as const;
 const SESSION_COOKIE_NAME = "excoba_session";

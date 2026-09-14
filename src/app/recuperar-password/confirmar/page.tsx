@@ -109,7 +109,8 @@ export default function ConfirmarPasswordPage() {
             className="rounded-md bg-aprobado/10 px-4 py-3 text-sm leading-6 text-ink/80"
           >
             Tu contraseña se guardó correctamente. Por seguridad, se cerraron las sesiones de tu
-            cuenta en todos los dispositivos. Inicia sesión con tu nueva contraseña.
+            cuenta en todos los dispositivos. Inicia sesión con tu nueva contraseña y genera un
+            nuevo código de recuperación en tu perfil; el anterior dejó de funcionar.
           </p>
           <Link
             href="/login"
@@ -121,14 +122,14 @@ export default function ConfirmarPasswordPage() {
       ) : !token ? (
         <div className="mt-8 space-y-4">
           <p role="alert" className="text-sm leading-6 text-alerta">
-            El enlace no es válido, ya se utilizó o expiró. Solicita uno nuevo para cambiar tu
-            contraseña.
+            El enlace no es válido, ya se utilizó o expiró. Si guardaste tu código de recuperación,
+            puedes usarlo para cambiar tu contraseña.
           </p>
           <Link
             href="/recuperar-password"
             className="inline-flex min-h-11 items-center text-sm text-pizarron underline"
           >
-            Solicitar un nuevo enlace
+            Usar mi código de recuperación
           </Link>
           <Link href="/login" className="block text-sm text-ink/60 underline">
             Volver a iniciar sesión
@@ -138,7 +139,8 @@ export default function ConfirmarPasswordPage() {
         <form onSubmit={handleSubmit} aria-busy={loading} className="mt-8 flex flex-col gap-4">
           <p className="text-sm leading-6 text-ink/60">
             Usa entre 10 y 128 caracteres. Al guardar, este enlace dejará de funcionar y se cerrarán
-            las sesiones abiertas de tu cuenta.
+            las sesiones abiertas de tu cuenta. Tu código de recuperación anterior también dejará de
+            funcionar; genera otro en Perfil después de iniciar sesión.
           </p>
           <label className="flex flex-col gap-1 text-sm text-ink/70">
             Nueva contraseña
@@ -196,7 +198,7 @@ export default function ConfirmarPasswordPage() {
             {loading ? "Guardando…" : "Guardar nueva contraseña"}
           </button>
           <Link href="/recuperar-password" className="text-sm text-pizarron underline">
-            Solicitar otro enlace
+            Usar mi código de recuperación
           </Link>
         </form>
       )}
