@@ -1,6 +1,11 @@
 import { db } from "@/db/client";
+import { requirePageRole } from "@/lib/page-authorization";
+import { AdminAccessDenied } from "@/components/admin-access-denied";
 
 export default async function AdminHomePage() {
+  // Layouts and pages may render in parallel; authorize before querying metrics.
+  const user = await requirePageRole("SUPER_ADMIN", "EDITOR_ACADEMICO", "SOPORTE", "ANALISTA");
+  if (!user) return <AdminAccessDenied />;
   const [totalAlumnos, licenciasActivas, preguntasPublicadas, simuladoresHoy] = await Promise.all([
     db.user.count({ where: { roles: { some: { role: { name: "ALUMNO" } } } } }),
     db.license.count({ where: { status: "ACTIVADA" } }),

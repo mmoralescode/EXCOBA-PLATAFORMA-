@@ -13,9 +13,9 @@ const mocks = vi.hoisted(() => ({
 }));
 vi.mock("@/db/client", () => ({ db: { feedback: { findMany: mocks.findMany } } }));
 vi.mock("@/lib/authorization", () => ({
-  requireRole: mocks.authorize,
   hasRole: (user: { roles: string[] }, role: string) => user.roles.includes(role),
 }));
+vi.mock("@/lib/page-authorization", () => ({ requirePageRole: mocks.authorize }));
 vi.mock("next/link", () => ({ default: "a" }));
 vi.mock("next/navigation", () => ({ useRouter: () => ({ refresh: mocks.refresh }) }));
 vi.mock("react", async (original) => {
@@ -93,9 +93,10 @@ afterEach(() => vi.unstubAllGlobals());
 
 describe("Bandeja privada del buzón", () => {
   it("autoriza en la página antes de consultar mensajes", async () => {
-    const denied = new Error("Sin permisos");
-    mocks.authorize.mockRejectedValueOnce(denied);
-    await expect(FeedbackPage({ searchParams: {} })).rejects.toBe(denied);
+    mocks.authorize.mockResolvedValueOnce(null);
+    const html = renderToStaticMarkup(await FeedbackPage({ searchParams: {} }));
+    expect(html).toContain("Acceso restringido");
+    expect(html).toContain('href="/perfil#buzon"');
     expect(mocks.authorize).toHaveBeenCalledWith("SUPER_ADMIN", "SOPORTE");
     expect(mocks.findMany).not.toHaveBeenCalled();
   });

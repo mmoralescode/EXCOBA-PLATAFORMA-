@@ -1,9 +1,11 @@
-import { requireRole } from "@/lib/authorization";
+import { requirePageRole } from "@/lib/page-authorization";
+import { AdminAccessDenied } from "@/components/admin-access-denied";
 import { db } from "@/db/client";
 import { formatLicenseDate, licenseExpiryLabel } from "@/components/license-validity";
 
 export default async function AdminLicensesPage() {
-  await requireRole("SUPER_ADMIN", "SOPORTE");
+  const user = await requirePageRole("SUPER_ADMIN", "SOPORTE");
+  if (!user) return <AdminAccessDenied />;
 
   const licenses = await db.license.findMany({
     orderBy: { createdAt: "desc" },

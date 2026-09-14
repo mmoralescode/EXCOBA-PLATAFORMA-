@@ -1,7 +1,8 @@
 import Link from "next/link";
 import { z } from "zod";
 import { db } from "@/db/client";
-import { requireRole } from "@/lib/authorization";
+import { requirePageRole } from "@/lib/page-authorization";
+import { AdminAccessDenied } from "@/components/admin-access-denied";
 import { FeedbackReviewButton } from "@/components/feedback-review-button";
 
 export const dynamic = "force-dynamic";
@@ -22,7 +23,8 @@ export default async function FeedbackPage({
   searchParams: { cursor?: string | string[] };
 }) {
   // This check must stay in the page: layouts do not serialize child rendering.
-  await requireRole("SUPER_ADMIN", "SOPORTE");
+  const user = await requirePageRole("SUPER_ADMIN", "SOPORTE");
+  if (!user) return <AdminAccessDenied />;
   const cursor = searchParams.cursor;
   if (cursor !== undefined && !z.string().uuid().safeParse(cursor).success) {
     return (

@@ -97,6 +97,7 @@ export function FeedbackBox() {
 
   return (
     <section
+      id="buzon"
       className="mt-8 rounded-md border border-ink/10 bg-white p-4"
       aria-labelledby="feedback-title"
     >
