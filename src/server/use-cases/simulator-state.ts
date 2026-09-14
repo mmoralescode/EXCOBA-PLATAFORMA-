@@ -1,5 +1,11 @@
 import { z } from "zod";
 import { db } from "@/db/client";
+import { Prisma } from "@prisma/client";
+import {
+  StructuredResponseSchema,
+  hasStructuredMode,
+  structuredPrompt,
+} from "./structured-responses";
 import { recoverAnswerMode } from "./simulator-formats";
 import { getRemainingSeconds, parseSimulatorConfig } from "@/server/use-cases/simulator-rules";
 
@@ -8,6 +14,7 @@ export const SaveSimulatorAnswerSchema = z.object({
   userId: z.string().min(1),
   questionId: z.string().min(1),
   selectedAnswerId: z.string().min(1).nullable(),
+  response: StructuredResponseSchema.optional(),
   flaggedForReview: z.boolean().default(false),
 });
 
@@ -25,6 +32,9 @@ export async function saveSimulatorAnswer(input: z.infer<typeof SaveSimulatorAns
 
   const attempt = await getActiveSimulatorAttempt(data.attemptId, data.userId);
   const config = parseSimulatorConfig(attempt.config);
+  const structured = hasStructuredMode(attempt.config, data.questionId);
+  if ((structured && data.selectedAnswerId) || (!structured && data.response))
+    throw new SimulatorStateError("Formato de respuesta no válido.");
   if (!config || !config.questionIds.includes(data.questionId)) {
     throw new SimulatorStateError("La pregunta no pertenece a este simulador.");
   }
@@ -40,20 +50,35 @@ export async function saveSimulatorAnswer(input: z.infer<typeof SaveSimulatorAns
     throw new SimulatorStateError("La respuesta seleccionada no es válida.");
   }
 
-  await db.attemptAnswer.upsert({
-    where: { attemptId_questionId: { attemptId: data.attemptId, questionId: data.questionId } },
-    create: {
-      attemptId: data.attemptId,
-      questionId: data.questionId,
-      selectedAnswerId: data.selectedAnswerId,
-      flaggedForReview: data.flaggedForReview,
-      answeredAt: new Date(),
-    },
-    update: {
-      selectedAnswerId: data.selectedAnswerId,
-      flaggedForReview: data.flaggedForReview,
-      answeredAt: new Date(),
-    },
+  await db.$transaction(async (tx) => {
+    // Lock the attempt and check the deadline again before saving. A late save
+    // must not overwrite an answer already graded by another request.
+    await tx.$queryRaw`SELECT "id" FROM "Attempt" WHERE "id" = ${data.attemptId} FOR UPDATE`;
+    const active = await tx.attempt.findUnique({ where: { id: data.attemptId } });
+    if (
+      !active ||
+      active.userId !== data.userId ||
+      active.status !== "EN_CURSO" ||
+      getRemainingSecondsForAttempt(active) <= 0
+    )
+      throw new SimulatorStateError("El simulador terminó; no se guardaron cambios tardíos.");
+    await tx.attemptAnswer.upsert({
+      where: { attemptId_questionId: { attemptId: data.attemptId, questionId: data.questionId } },
+      create: {
+        attemptId: data.attemptId,
+        questionId: data.questionId,
+        selectedAnswerId: data.selectedAnswerId,
+        response: data.response ?? Prisma.DbNull,
+        flaggedForReview: data.flaggedForReview,
+        answeredAt: new Date(),
+      },
+      update: {
+        response: data.response ?? Prisma.DbNull,
+        selectedAnswerId: data.selectedAnswerId,
+        flaggedForReview: data.flaggedForReview,
+        answeredAt: new Date(),
+      },
+    });
   });
 
   return { ok: true, remainingSeconds: getRemainingSecondsForAttempt(attempt) };
@@ -61,13 +86,13 @@ export async function saveSimulatorAnswer(input: z.infer<typeof SaveSimulatorAns
 
 /** Recupera el estado completo del intento (para reconexión tras desconexión). */
 export async function getSimulatorState(attemptId: string, userId: string) {
-  const attempt = await getActiveSimulatorAttempt(attemptId, userId);
+  const attempt = await getActiveSimulatorAttempt(attemptId, userId, true);
   const config = parseSimulatorConfig(attempt.config);
   if (!config) throw new SimulatorStateError("La configuración del simulador no es válida.");
 
   const savedAnswers = await db.attemptAnswer.findMany({
     where: { attemptId },
-    select: { questionId: true, selectedAnswerId: true, flaggedForReview: true },
+    select: { questionId: true, selectedAnswerId: true, response: true, flaggedForReview: true },
   });
   const questions = await db.question.findMany({
     where: { id: { in: config.questionIds } },
@@ -88,7 +113,16 @@ export async function getSimulatorState(attemptId: string, userId: string) {
     questions: config.questionIds.flatMap((questionId) => {
       const question = questionsById.get(questionId);
       return question
-        ? [{ ...question, answerMode: recoverAnswerMode(attempt.config, question) }]
+        ? [
+            {
+              ...question,
+              answerMode: recoverAnswerMode(attempt.config, question),
+              interaction: hasStructuredMode(attempt.config, questionId)
+                ? structuredPrompt(questionId)
+                : undefined,
+              answers: hasStructuredMode(attempt.config, questionId) ? [] : question.answers,
+            },
+          ]
         : [];
     }),
     savedAnswers,
@@ -103,21 +137,19 @@ export async function getLatestSimulatorState(userId: string) {
   return attempt ? getSimulatorState(attempt.id, userId) : null;
 }
 
-async function getActiveSimulatorAttempt(attemptId: string, userId: string) {
+async function getActiveSimulatorAttempt(attemptId: string, userId: string, allowDeadline = false) {
   const attempt = await db.attempt.findUnique({ where: { id: attemptId } });
   if (!attempt || attempt.userId !== userId || attempt.type !== "SIMULADOR") {
     throw new SimulatorStateError("Simulador no encontrado.");
   }
 
-  // Auto-expiración: si el tiempo ya se agotó pero el estado sigue
-  // EN_CURSO (el alumno nunca hizo el "submit" final), se marca EXPIRADO
-  // en cuanto el servidor detecta la condición, en lugar de depender de un
-  // job en segundo plano.
-  if (attempt.status === "EN_CURSO" && getRemainingSecondsForAttempt(attempt) <= 0) {
-    await db.attempt.update({
-      where: { id: attempt.id },
-      data: { status: "EXPIRADO", finishedAt: new Date() },
-    });
+  // El estado puede leerse al vencer para recuperar y entregar lo guardado.
+  // Las escrituras se rechazan; submitAttempt ignora elecciones tardías.
+  if (
+    !allowDeadline &&
+    attempt.status === "EN_CURSO" &&
+    getRemainingSecondsForAttempt(attempt) <= 0
+  ) {
     throw new SimulatorStateError("El tiempo del simulador se agotó.");
   }
 

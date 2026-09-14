@@ -1,6 +1,9 @@
 # Estado del proyecto
 
+> Actualización de septiembre de 2026: consultar [mejoras de aprendizaje](MEJORAS_APRENDIZAJE_2026_09.md). Banco de 372 preguntas para 209 temas; simulador corto/completo y revisión de resultados. Correo real pendiente de credenciales/remitente verificado, aviso integral pendiente de identidad y contacto; prueba móvil real pendiente. Las notas de módulos originales de abajo no acreditan esos pendientes.
+
 ## Completado
+
 - Los 11 módulos originales (diseño, init, base de datos, auth, licencias,
   contenido académico, práctica, simulador, admin, seguridad, despliegue).
 - Las 6 pantallas de alumno: login, activar folio + registro, recuperar
@@ -9,11 +12,11 @@
 - Base de datos real en Neon (PostgreSQL), con las 22 tablas creadas y
   datos de arranque cargados (roles, admin, producto, 7 materias con tema
   y pregunta de ejemplo).
-- Envío real de correo (recuperación de contraseña, folios asignados) vía
-  Resend — requiere `EMAIL_PROVIDER=resend` y `RESEND_API_KEY` en las
-  variables de entorno (ver README).
+- Integración de recuperación por Resend implementada; entrega real aún no verificada.
+  Requiere proveedor, clave privada, remitente verificado y URL de aplicación.
 
 ## Decisiones/cambios importantes tomados DESPUÉS del diseño original
+
 Estos ajustes surgieron al depurar el despliegue real en Vercel y son
 importantes si vuelves a desplegar desde cero:
 
@@ -52,6 +55,7 @@ importantes si vuelves a desplegar desde cero:
    completo y es la fuente de verdad.
 
 ## Pendiente / próximos pasos naturales
+
 - Verificar un dominio propio en Resend (mientras tanto, sólo puede
   enviar correos a la dirección con la que se registró la cuenta de
   Resend — limitación de su modo sandbox).
@@ -69,10 +73,12 @@ importantes si vuelves a desplegar desde cero:
   espaciada, rachas, PWA).
 
 ## Credenciales de prueba en producción
+
 - Admin: `admin@excoba.local` / `CambiaEstaPassword123!` (cámbiala).
 - Panel admin: `/admin`.
 
 ## Variables de entorno configuradas en Vercel (producción)
+
 `DATABASE_URL`, `SESSION_SECRET`, `APP_URL`, `EMAIL_PROVIDER`,
 `RESEND_API_KEY` (las dos últimas, agregarlas si aún no se hizo — ver
 README, sección "Correo transaccional").

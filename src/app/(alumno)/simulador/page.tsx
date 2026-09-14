@@ -2,7 +2,13 @@
 
 import { useEffect, useRef, useState, useCallback } from "react";
 import { SimulatorQuestionAnswer } from "@/components/simulator-question-answer";
+import { StructuredQuestionAnswer } from "@/components/structured-question-answer";
+import type { InteractionPrompt, StructuredResponse } from "@/content/interaction-types";
+import { responseComplete } from "@/content/interaction-types";
 import { SimulatorFormulaSheet } from "@/components/simulator-formula-sheet";
+import { CareerSelector, CareerSourceNote, useCareer } from "@/components/career-selector";
+import { AttemptFeedback } from "@/components/attempt-feedback";
+import type { ReviewItem } from "@/content/attempt-review-types";
 import {
   SIMULATOR_QUESTION_COUNT,
   SIMULATOR_TIME_LIMIT_SECONDS,
@@ -14,7 +20,8 @@ interface Answer {
 }
 
 interface Question {
-  answerMode?: "MULTIPLE_CHOICE" | "DRAG_DROP";
+  answerMode?: "MULTIPLE_CHOICE" | "DRAG_DROP" | "STRUCTURED";
+  interaction?: InteractionPrompt;
   id: string;
   text: string;
   subjectId: string;
@@ -22,6 +29,7 @@ interface Question {
 }
 
 interface Result {
+  review?: ReviewItem[];
   score: number;
   correctCount: number;
   totalCount: number;
@@ -34,9 +42,14 @@ function formatTime(totalSeconds: number): string {
 }
 
 export default function SimuladorPage() {
+  const { career, choose, ready } = useCareer();
+  const [mode, setMode] = useState<"short" | "full">("short");
   const [attemptId, setAttemptId] = useState<string | null>(null);
   const [questions, setQuestions] = useState<Question[]>([]);
   const [selected, setSelected] = useState<Record<string, string>>({});
+  const [responses, setResponses] = useState<Record<string, StructuredResponse>>({});
+  const responsesRef = useRef<Record<string, StructuredResponse>>({});
+  responsesRef.current = responses;
   const [remainingSeconds, setRemainingSeconds] = useState<number | null>(null);
   const [result, setResult] = useState<Result | null>(null);
   const [loading, setLoading] = useState(false);
@@ -67,6 +80,7 @@ export default function SimuladorPage() {
           answers: questionsRef.current.map((q) => ({
             questionId: q.id,
             selectedAnswerId: selectedRef.current[q.id] ?? null,
+            response: responsesRef.current[q.id],
           })),
         }),
       });
@@ -101,6 +115,16 @@ export default function SimuladorPage() {
         if (!cancelled && response.ok && data.attemptId) {
           setAttemptId(data.attemptId);
           setQuestions(data.questions ?? []);
+          setResponses(
+            Object.fromEntries(
+              (data.savedAnswers ?? [])
+                .filter((a: { response?: unknown }) => a.response)
+                .map((a: { questionId: string; response: StructuredResponse }) => [
+                  a.questionId,
+                  a.response,
+                ]),
+            ),
+          );
           setRemainingSeconds(data.remainingSeconds);
           setSelected(
             Object.fromEntries(
@@ -169,6 +193,8 @@ export default function SimuladorPage() {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
+          mode,
+          careerId: career?.id,
           questionCount: SIMULATOR_QUESTION_COUNT,
           timeLimitSeconds: SIMULATOR_TIME_LIMIT_SECONDS,
         }),
@@ -186,6 +212,7 @@ export default function SimuladorPage() {
       setQuestions(data.questions);
       setRemainingSeconds(data.timeLimitSeconds);
       setSelected({});
+      setResponses({});
       setCurrentIndex(0);
       submittingRef.current = false;
     } catch {
@@ -195,33 +222,61 @@ export default function SimuladorPage() {
     }
   }
 
-  function selectAnswer(questionId: string, answerId: string | null) {
+  function selectAnswer(
+    questionId: string,
+    answerId: string | null,
+    responseValue?: StructuredResponse,
+  ) {
     if (!attemptId || loading || remainingSeconds === 0) return;
     const next = { ...selectedRef.current };
     if (answerId) next[questionId] = answerId;
     else delete next[questionId];
     selectedRef.current = next;
     setSelected(next);
+    if (responseValue) {
+      const nextResponses = { ...responsesRef.current, [questionId]: responseValue };
+      responsesRef.current = nextResponses;
+      setResponses(nextResponses);
+    }
     setError(null);
     // Autosave: se guarda de inmediato en el servidor para poder recuperar
     // el intento si hay una desconexión (ver Módulo 8).
     // Serializar evita que una petición lenta sobrescriba una elección más reciente.
-    saveQueue.current = saveQueue.current.then(async () => {
-      const controller = new AbortController();
-      const timeout = setTimeout(() => controller.abort(), 10_000);
-      const response = await fetch("/api/simulator/answer", {
-        method: "POST",
-        signal: controller.signal,
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ attemptId, questionId, selectedAnswerId: answerId }),
-      }).catch(() => null);
-      clearTimeout(timeout);
-      if (!response || !response.ok) {
-        setError("No se pudo guardar esta respuesta. Intenta seleccionarla de nuevo.");
-      }
-    });
+    saveQueue.current = saveQueue.current
+      .then(async () => {
+        // Coalesce queued keystrokes/selections while a previous request is in flight.
+        if (
+          responseValue
+            ? JSON.stringify(responsesRef.current[questionId]) !== JSON.stringify(responseValue)
+            : (selectedRef.current[questionId] ?? null) !== answerId
+        )
+          return;
+        const controller = new AbortController();
+        const timeout = setTimeout(() => controller.abort(), 10_000);
+        const response = await fetch("/api/simulator/answer", {
+          method: "POST",
+          signal: controller.signal,
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            attemptId,
+            questionId,
+            selectedAnswerId: answerId,
+            response: responseValue,
+          }),
+        }).catch(() => null);
+        clearTimeout(timeout);
+        if (!response || !response.ok) {
+          setError("No se pudo guardar esta respuesta. Intenta seleccionarla de nuevo.");
+        }
+      })
+      .catch(() =>
+        setError("No se pudo guardar. Revisa tu conexión y vuelve a seleccionar la respuesta."),
+      );
   }
 
+  const answeredCount = questions.filter((q) =>
+    q.interaction ? responseComplete(q.interaction, responses[q.id]) : !!selected[q.id],
+  ).length;
   return (
     <main className="mx-auto max-w-2xl px-6 py-16">
       <div className="flex items-baseline justify-between">
@@ -235,20 +290,51 @@ export default function SimuladorPage() {
 
       {!attemptId && !result && (
         <div className="mt-8">
+          <fieldset className="mb-5 space-y-3">
+            <legend className="mb-2 font-medium">Elige la duración de tu práctica</legend>
+            <label className="flex min-h-11 items-center gap-3">
+              <input
+                type="radio"
+                name="simulator-mode"
+                checked={mode === "short"}
+                onChange={() => setMode("short")}
+              />
+              Corto: 60 preguntas · 60 minutos
+            </label>
+            <label className="flex min-h-11 items-center gap-3">
+              <input
+                type="radio"
+                name="simulator-mode"
+                checked={mode === "full"}
+                onChange={() => setMode("full")}
+              />
+              Completo: 180 preguntas · 180 minutos
+            </label>
+          </fieldset>
+          {mode === "full" && (
+            <div className="mb-5 space-y-3">
+              <CareerSelector value={career?.id ?? ""} onChange={choose} />
+              {career && <CareerSourceNote careerId={career.id} historicalOnly />}
+              <p className="text-sm text-ink/65">
+                40 de primaria, 80 de secundaria y 60 de las tres asignaturas de tu carrera. El
+                tiempo es una configuración de práctica, no una confirmación de la duración oficial.
+              </p>
+            </div>
+          )}
           <p className="text-sm text-ink/60">
-            {SIMULATOR_QUESTION_COUNT} preguntas, {SIMULATOR_TIME_LIMIT_SECONDS / 60} minutos.
             Ejercicios originales de práctica, no una réplica completa del examen oficial. El tiempo
             se controla en el servidor: si cierras la pestaña y vuelves, tu progreso y el tiempo
             restante real se recuperan automáticamente.
           </p>
           <p className="mt-3 text-sm text-ink/60">
-            Combina opción múltiple con arrastre en Historia, Biología y algunas preguntas de
-            Geometría y Física. No se reutilizan preguntas de tus intentos anteriores, aunque no los
-            hayas terminado. Si quedan menos de 60 nuevas, deberás esperar a que ampliemos el banco.
+            Combina opción múltiple, clasificación por arrastre, selección de elementos, un esquema
+            de geometría y escritura numérica o algebraica, según las preguntas nuevas disponibles.
+            No se reutilizan preguntas de tus intentos anteriores, aunque no los hayas terminado. Si
+            faltan preguntas nuevas para la modalidad elegida, te lo indicaremos antes de iniciar.
           </p>
           <button
             onClick={startSimulator}
-            disabled={loading || recovering}
+            disabled={loading || recovering || !ready || (mode === "full" && !career)}
             className="mt-4 rounded-md bg-pizarron px-4 py-2 text-white transition hover:bg-pizarron/90 disabled:opacity-50"
           >
             {recovering ? "Recuperando progreso…" : loading ? "Cargando…" : "Empezar simulador"}
@@ -265,12 +351,12 @@ export default function SimuladorPage() {
       {questions.length > 0 && (
         <div className="mt-8 flex flex-col gap-8">
           <p className="text-sm text-ink/60" role="status">
-            {Object.keys(selected).length} de {questions.length} preguntas respondidas
+            {answeredCount} de {questions.length} preguntas respondidas
           </p>
           <progress
             aria-label="Preguntas respondidas"
             className="h-2 w-full accent-pizarron"
-            value={Object.keys(selected).length}
+            value={answeredCount}
             max={questions.length}
           />
           <label className="flex items-center gap-3 text-sm text-ink/70">
@@ -284,7 +370,13 @@ export default function SimuladorPage() {
               {questions.map((q, index) => (
                 <option key={q.id} value={index}>
                   {index + 1} de {questions.length}
-                  {selected[q.id] ? " · Respondida" : " · Pendiente"}
+                  {(
+                    q.interaction
+                      ? responseComplete(q.interaction, responses[q.id])
+                      : selected[q.id]
+                  )
+                    ? " · Respondida"
+                    : " · Pendiente"}
                 </option>
               ))}
             </select>
@@ -294,15 +386,25 @@ export default function SimuladorPage() {
               <legend className="px-1 text-sm text-ink/50">
                 Pregunta {currentIndex + 1} de {questions.length}
               </legend>
-              <p className="font-medium text-ink">{q.text}</p>
-              <SimulatorQuestionAnswer
-                answerMode={q.answerMode}
-                questionId={q.id}
-                answers={q.answers}
-                selectedId={selected[q.id]}
-                disabled={loading || remainingSeconds === 0}
-                onSelect={(answerId) => selectAnswer(q.id, answerId)}
-              />
+              <p className="font-medium text-ink">{q.interaction?.prompt ?? q.text}</p>
+              {q.interaction ? (
+                <StructuredQuestionAnswer
+                  questionId={q.id}
+                  interaction={q.interaction}
+                  value={responses[q.id]}
+                  disabled={loading || remainingSeconds === 0}
+                  onChange={(value) => selectAnswer(q.id, null, value)}
+                />
+              ) : (
+                <SimulatorQuestionAnswer
+                  answerMode={q.answerMode === "STRUCTURED" ? undefined : q.answerMode}
+                  questionId={q.id}
+                  answers={q.answers}
+                  selectedId={selected[q.id]}
+                  disabled={loading || remainingSeconds === 0}
+                  onSelect={(answerId) => selectAnswer(q.id, answerId)}
+                />
+              )}
             </fieldset>
           ))}
 
@@ -339,11 +441,13 @@ export default function SimuladorPage() {
         <div className="mt-8 rounded-md border border-ink/10 bg-white p-6">
           <p className="font-display text-2xl text-pizarron">{Math.round(result.score)}%</p>
           <p className="mt-1 text-sm text-ink/70">
-            {result.correctCount} de {result.totalCount} respuestas correctas.
+            {result.correctCount} de {result.totalCount} respuestas completamente correctas. El
+            porcentaje incluye crédito parcial en preguntas con varios elementos.
           </p>
           <button onClick={() => setResult(null)} className="mt-4 text-sm text-pizarron underline">
             Hacer otro simulador
           </button>
+          <AttemptFeedback review={result.review} />
         </div>
       )}
     </main>

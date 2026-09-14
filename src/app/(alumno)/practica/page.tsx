@@ -1,6 +1,8 @@
 "use client";
 
 import Link from "next/link";
+import { AttemptFeedback } from "@/components/attempt-feedback";
+import type { AttemptReview } from "@/content/attempt-review-types";
 import { useEffect, useRef, useState } from "react";
 import { CareerSelector, CareerSourceNote, useCareer } from "@/components/career-selector";
 import { isCareerSubject, isCommonSubject } from "@/content/subject-rules";
@@ -8,7 +10,7 @@ import type { StudySubject } from "@/content/study-types";
 
 type Subject = Omit<StudySubject, "topics">;
 type Question = { id: string; text: string; answers: { id: string; text: string }[] };
-type Result = { score: number; correctCount: number; totalCount: number };
+type Result = AttemptReview;
 
 export default function PracticaPage() {
   const { career, choose, ready } = useCareer();
@@ -16,6 +18,7 @@ export default function PracticaPage() {
   const [mode, setMode] = useState<"career" | "all">("career");
   const initializedSelection = useRef(false);
   const [subjectKey, setSubjectKey] = useState("");
+  const [topicId, setTopicId] = useState("");
   const [attemptId, setAttemptId] = useState<string | null>(null);
   const [questions, setQuestions] = useState<Question[]>([]);
   const [index, setIndex] = useState(0);
@@ -54,6 +57,7 @@ export default function PracticaPage() {
       (s) => s.id === params.get("subject") && s.scope === (params.get("scope") ?? "official"),
     );
     if (subject) {
+      setTopicId(params.get("topic") ?? "");
       setSubjectKey(subject.key);
       setMode(
         subject.scope === "extra" || !isCareerSubject(subject.officialId ?? "", career)
@@ -85,6 +89,7 @@ export default function PracticaPage() {
           careerId: career.id,
           questionCount: 10,
           subjectId: subject?.id,
+          topicId: topicId || undefined,
           scope: subject ? subject.scope : mode,
         }),
       });
@@ -181,6 +186,7 @@ export default function PracticaPage() {
                     value={career.id}
                     onChange={(id) => {
                       choose(id);
+                      setTopicId("");
                       setMode("career");
                       setSubjectKey("");
                     }}
@@ -199,6 +205,7 @@ export default function PracticaPage() {
                   aria-pressed={mode === "career"}
                   onClick={() => {
                     setMode("career");
+                    setTopicId("");
                     setSubjectKey("");
                   }}
                   className={`rounded-xl border p-4 text-left ${mode === "career" ? "border-pizarron bg-pizarron text-white" : "border-ink/15 bg-white text-pizarron"}`}
@@ -213,6 +220,7 @@ export default function PracticaPage() {
                   aria-pressed={mode === "all"}
                   onClick={() => {
                     setMode("all");
+                    setTopicId("");
                     setSubjectKey("");
                   }}
                   className={`rounded-xl border p-4 text-left ${mode === "all" ? "border-pizarron bg-pizarron text-white" : "border-ink/15 bg-white text-pizarron"}`}
@@ -227,7 +235,10 @@ export default function PracticaPage() {
                 ¿Qué área quieres comenzar? <span className="text-ink/50">Opcional</span>
                 <select
                   value={subjectKey}
-                  onChange={(event) => setSubjectKey(event.target.value)}
+                  onChange={(event) => {
+                    setSubjectKey(event.target.value);
+                    setTopicId("");
+                  }}
                   disabled={loadingSubjects}
                   className="mt-2 w-full rounded-lg border border-ink/20 bg-white p-3"
                 >
@@ -256,6 +267,18 @@ export default function PracticaPage() {
                     ))}
                 </select>
               </label>
+              {topicId && (
+                <p className="text-sm text-ink/65">
+                  Repaso dirigido al tema elegido desde tus resultados.{" "}
+                  <button
+                    type="button"
+                    className="min-h-11 text-pizarron underline"
+                    onClick={() => setTopicId("")}
+                  >
+                    Practicar toda la asignatura
+                  </button>
+                </p>
+              )}
               <div className="flex items-center justify-between gap-4 rounded-xl bg-white p-4">
                 <p className="text-sm leading-6 text-ink/70">
                   Hasta 10 preguntas por sesión.
@@ -364,6 +387,7 @@ export default function PracticaPage() {
               aria-label="Preparar otra práctica"
               onClick={() => {
                 setResult(null);
+                setTopicId("");
                 setMode("career");
                 setSubjectKey("");
                 setError("");
@@ -373,6 +397,7 @@ export default function PracticaPage() {
               <span aria-hidden="true">▶</span>
             </button>
           </div>
+          <AttemptFeedback review={result.review} />
         </div>
       )}
     </main>

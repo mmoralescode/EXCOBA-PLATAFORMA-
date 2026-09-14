@@ -1,5 +1,12 @@
 import { z } from "zod";
 import { db } from "@/db/client";
+import { getAttemptReview } from "./attempt-review";
+import { Prisma } from "@prisma/client";
+import {
+  StructuredResponseSchema,
+  gradeStructured,
+  hasStructuredMode,
+} from "./structured-responses";
 import { recalculateTopicPriority } from "@/server/use-cases/study-priority";
 import {
   hasSameQuestionSet,
@@ -15,11 +22,13 @@ export const SubmitAttemptSchema = z.object({
       z.object({
         questionId: z.string().min(1),
         selectedAnswerId: z.string().min(1).nullable(),
+        response: StructuredResponseSchema.optional(),
         flaggedForReview: z.boolean().default(false),
         responseTimeSeconds: z.number().int().min(0).optional(),
       }),
     )
-    .min(1),
+    .min(1)
+    .max(200),
   expectedType: z.enum(["PRACTICA", "SIMULADOR"]).optional(),
 });
 
@@ -57,11 +66,17 @@ export async function submitAttempt(input: z.infer<typeof SubmitAttemptSchema>) 
       throw new SubmitAttemptError("La entrega no coincide con las preguntas asignadas.");
     }
     if (getRemainingSeconds(attempt.startedAt, config) <= 0) {
-      await db.attempt.update({
-        where: { id: attempt.id },
-        data: { status: "EXPIRADO", finishedAt: new Date() },
+      // Once time expires, ignore client answers: only already-saved work counts.
+      const saved = await db.attemptAnswer.findMany({ where: { attemptId: attempt.id } });
+      data.answers = config.questionIds.map((questionId) => {
+        const answer = saved.find((a) => a.questionId === questionId);
+        return {
+          questionId,
+          selectedAnswerId: answer?.selectedAnswerId ?? null,
+          response: answer?.response ? StructuredResponseSchema.parse(answer.response) : undefined,
+          flaggedForReview: answer?.flaggedForReview ?? false,
+        };
       });
-      throw new SubmitAttemptError("El tiempo del simulador se agotó.");
     }
   } else if (new Set(data.answers.map((a) => a.questionId)).size !== data.answers.length) {
     throw new SubmitAttemptError("La entrega contiene preguntas repetidas.");
@@ -93,13 +108,24 @@ export async function submitAttempt(input: z.infer<typeof SubmitAttemptSchema>) 
   }
 
   let correctCount = 0;
+  let totalCredit = 0;
   const attemptAnswersData = data.answers.map((a) => {
     const question = questionsById.get(a.questionId);
     const correctAnswer = question?.answers.find((ans) => ans.isCorrect);
     if (a.selectedAnswerId && !question?.answers.some((ans) => ans.id === a.selectedAnswerId)) {
       throw new SubmitAttemptError("Una respuesta seleccionada no pertenece a su pregunta.");
     }
-    const isCorrect = !!a.selectedAnswerId && a.selectedAnswerId === correctAnswer?.id;
+    const structured =
+      attempt.type === "SIMULADOR" && hasStructuredMode(attempt.config, a.questionId);
+    if ((structured && a.selectedAnswerId) || (!structured && a.response))
+      throw new SubmitAttemptError("Formato de respuesta no válido.");
+    const credit = structured
+      ? gradeStructured(a.questionId, a.response)
+      : a.selectedAnswerId && a.selectedAnswerId === correctAnswer?.id
+        ? 1
+        : 0;
+    const isCorrect = credit === 1;
+    totalCredit += credit;
     if (isCorrect) correctCount += 1;
 
     return {
@@ -107,16 +133,26 @@ export async function submitAttempt(input: z.infer<typeof SubmitAttemptSchema>) 
       questionId: a.questionId,
       selectedAnswerId: a.selectedAnswerId,
       isCorrect,
+      credit,
+      response: a.response ?? Prisma.DbNull,
       flaggedForReview: a.flaggedForReview,
       responseTimeSeconds: a.responseTimeSeconds,
       answeredAt: new Date(),
     };
   });
 
-  const score = (correctCount / data.answers.length) * 100;
+  const score = (totalCredit / data.answers.length) * 100;
 
   await db.$transaction(
     async (tx) => {
+      // Different attempts by the same student cannot overwrite each other's totals.
+      await tx.$queryRaw`SELECT "id" FROM "User" WHERE "id" = ${data.userId} FOR UPDATE`;
+      // Compare-and-set serializes double clicks/retries before progress is changed.
+      const claimed = await tx.attempt.updateMany({
+        where: { id: data.attemptId, userId: data.userId, status: "EN_CURSO" },
+        data: { status: "ENTREGADO", finishedAt: new Date(), score },
+      });
+      if (claimed.count !== 1) throw new SubmitAttemptError("Este intento ya fue entregado.");
       // En el simulador, las respuestas ya se fueron guardando con autosave
       // (ver `saveSimulatorAnswer`); aquí se actualizan en vez de duplicarlas.
       for (const answerData of attemptAnswersData) {
@@ -138,11 +174,12 @@ export async function submitAttempt(input: z.infer<typeof SubmitAttemptSchema>) 
       });
 
       if (attempt.type === "SIMULADOR") {
-        const bySubject = new Map<string, { correct: number; total: number }>();
+        const bySubject = new Map<string, { correct: number; total: number; credit: number }>();
         for (const a of attemptAnswersData) {
           const subjectId = questionsById.get(a.questionId)?.subjectId;
           if (!subjectId) continue;
-          const bucket = bySubject.get(subjectId) ?? { correct: 0, total: 0 };
+          const bucket = bySubject.get(subjectId) ?? { correct: 0, total: 0, credit: 0 };
+          bucket.credit += a.credit;
           bucket.total += 1;
           if (a.isCorrect) bucket.correct += 1;
           bySubject.set(subjectId, bucket);
@@ -152,7 +189,7 @@ export async function submitAttempt(input: z.infer<typeof SubmitAttemptSchema>) 
             data: {
               attemptId: data.attemptId,
               subjectId,
-              score: (bucket.correct / bucket.total) * 100,
+              score: (bucket.credit / bucket.total) * 100,
               correctCount: bucket.correct,
               totalCount: bucket.total,
             },
@@ -203,7 +240,16 @@ export async function submitAttempt(input: z.infer<typeof SubmitAttemptSchema>) 
   // Recalcular prioridad fuera de la transacción principal: no debe
   // bloquear la entrega del intento si falla o tarda.
   const topicIds = [...new Set(questions.map((q) => q.topicId))];
-  await Promise.all(topicIds.map((topicId) => recalculateTopicPriority(data.userId, topicId)));
+  await Promise.allSettled(
+    topicIds.map((topicId) => recalculateTopicPriority(data.userId, topicId)),
+  );
 
-  return { attemptId: data.attemptId, score, correctCount, totalCount: data.answers.length };
+  const review = await getAttemptReview(data.attemptId, data.userId);
+  return {
+    attemptId: data.attemptId,
+    score,
+    correctCount,
+    totalCount: data.answers.length,
+    review: review?.review ?? [],
+  };
 }

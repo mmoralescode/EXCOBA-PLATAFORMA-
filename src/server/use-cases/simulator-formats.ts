@@ -1,4 +1,4 @@
-export type SimulatorAnswerMode = "MULTIPLE_CHOICE" | "DRAG_DROP";
+export type SimulatorAnswerMode = "MULTIPLE_CHOICE" | "DRAG_DROP" | "STRUCTURED";
 type Candidate = { id: string; topicId?: string };
 
 // Solo algunas preguntas de geometría y física se prestan al arrastre simple.
@@ -48,7 +48,7 @@ export function assignAnswerModes(questions: Candidate[]): Record<string, Simula
 export function recoverAnswerMode(config: unknown, question: Candidate): SimulatorAnswerMode {
   const modes = (config as { answerModes?: Record<string, unknown> } | null)?.answerModes;
   const saved = modes?.[question.id];
-  if (saved === "DRAG_DROP" || saved === "MULTIPLE_CHOICE") return saved;
+  if (saved === "DRAG_DROP" || saved === "MULTIPLE_CHOICE" || saved === "STRUCTURED") return saved;
   // Intentos previos conservan preguntas, elecciones y tiempo; reciben el formato por materia.
   return dragCategory(question) ? "DRAG_DROP" : "MULTIPLE_CHOICE";
 }

@@ -1,4 +1,6 @@
 import { requireUser } from "@/lib/authorization";
+import Link from "next/link";
+import { subjectNames } from "@/content/subject-catalog";
 import { db } from "@/db/client";
 import { getStudyRecommendations } from "@/server/use-cases/study-priority";
 import { formatLicenseDate, licenseExpiryLabel } from "@/components/license-validity";
@@ -24,6 +26,12 @@ export default async function PerfilPage() {
   });
 
   const recommendations = await getStudyRecommendations(user.id);
+  const history = await db.attempt.findMany({
+    where: { userId: user.id, status: { in: ["ENTREGADO", "EXPIRADO"] } },
+    orderBy: { startedAt: "desc" },
+    take: 30,
+    include: { results: true },
+  });
 
   return (
     <main className="mx-auto max-w-3xl px-6 py-16">
@@ -61,7 +69,7 @@ export default async function PerfilPage() {
       </section>
 
       <section className="mt-8">
-        <h2 className="font-display text-lg text-pizarron">Recomendación de estudio</h2>
+        <h2 className="font-display text-lg text-pizarron">Qué estudiar hoy</h2>
         <p className="mt-1 text-sm text-ink/60">
           Calculada a partir de tu precisión, tus errores recientes y cuánto llevas sin practicar
           cada tema.
@@ -77,11 +85,17 @@ export default async function PerfilPage() {
           </p>
         ) : (
           <ul className="mt-4 divide-y divide-ink/10 rounded-md border border-ink/10 bg-white">
-            {recommendations.map((item) => (
+            {recommendations.slice(0, 5).map((item) => (
               <li key={item.id} className="flex items-center justify-between px-4 py-3 text-sm">
                 <div>
                   <p className="font-medium text-ink">{item.topic.name}</p>
                   <p className="text-ink/50">{item.topic.subject.name}</p>
+                  <Link
+                    className="inline-flex min-h-11 items-center text-pizarron underline"
+                    href={`/practica?subject=${encodeURIComponent(item.topic.subjectId)}&topic=${encodeURIComponent(item.topicId)}&scope=official`}
+                  >
+                    ▶ Repasar
+                  </Link>
                 </div>
                 <span className={`font-medium ${PRIORITY_COLOR[item.priority]}`}>
                   {PRIORITY_LABEL[item.priority]}
@@ -90,6 +104,67 @@ export default async function PerfilPage() {
             ))}
           </ul>
         )}
+      </section>
+      <section className="mt-8">
+        <h2 className="font-display text-lg text-pizarron">Tu evolución</h2>
+        <p className="mt-1 text-sm text-ink/60">
+          Últimos 30 intentos. Los porcentajes corresponden a ejercicios de práctica, no predicen tu
+          admisión.
+        </p>
+        {!history.length && (
+          <p className="mt-4 text-sm">Al entregar tu primer intento aparecerá aquí.</p>
+        )}
+        <ol className="mt-4 space-y-3">
+          {history.map((attempt) => (
+            <li key={attempt.id} className="rounded-md border border-ink/10 bg-white p-4">
+              <div className="flex flex-wrap items-center justify-between gap-2 text-sm">
+                <p>
+                  {attempt.type === "SIMULADOR" ? "Simulador" : "Práctica"} ·{" "}
+                  {attempt.startedAt.toLocaleDateString("es-MX", {
+                    timeZone: "America/Mexico_City",
+                  })}
+                </p>
+                <p>
+                  {attempt.status === "EXPIRADO"
+                    ? "Tiempo agotado"
+                    : `${Math.round(attempt.score ?? 0)}%`}
+                </p>
+              </div>
+              {attempt.results.length > 0 && (
+                <details className="mt-3 text-sm">
+                  <summary className="cursor-pointer">Resultado por asignatura</summary>
+                  <ul className="mt-3 space-y-3">
+                    {attempt.results.map((result) => (
+                      <li key={result.id}>
+                        <div className="flex flex-wrap justify-between gap-2">
+                          <span>
+                            {subjectNames[result.subjectId.replace("uaq-2026-2-subject-", "")] ??
+                              "Asignatura"}
+                          </span>
+                          <span>{Math.round(result.score)}%</span>
+                        </div>
+                        <progress
+                          className="h-2 w-full accent-pizarron"
+                          aria-label="Resultado por asignatura"
+                          value={result.score}
+                          max={100}
+                        />
+                      </li>
+                    ))}
+                  </ul>
+                </details>
+              )}
+              {attempt.status === "ENTREGADO" && (
+                <Link
+                  className="inline-flex min-h-11 items-center text-sm text-pizarron underline"
+                  href={`/resultados/${attempt.id}`}
+                >
+                  Revisar respuestas y explicaciones
+                </Link>
+              )}
+            </li>
+          ))}
+        </ol>
       </section>
     </main>
   );

@@ -1,5 +1,7 @@
 import { z } from "zod";
 import { db } from "@/db/client";
+import { fullExamSubjects, selectFullExam } from "./simulator-blueprint";
+import { structuredPrompt } from "./structured-responses";
 import {
   assignAnswerModes,
   selectMixedQuestions,
@@ -13,6 +15,8 @@ import {
 export class SimulatorStartError extends Error {}
 
 export const StartSimulatorSchema = z.object({
+  mode: z.enum(["short", "full"]).optional(),
+  careerId: z.string().optional(),
   userId: z.string().min(1),
   questionCount: z.number().int().min(5).max(200).default(SIMULATOR_QUESTION_COUNT),
   timeLimitSeconds: z
@@ -26,6 +30,16 @@ export const StartSimulatorSchema = z.object({
 
 export async function startSimulator(input: z.infer<typeof StartSimulatorSchema>) {
   const data = StartSimulatorSchema.parse(input);
+  let fullSubjects: string[] | undefined;
+  if (data.mode === "full") {
+    try {
+      fullSubjects = fullExamSubjects(data.careerId);
+    } catch (error) {
+      throw new SimulatorStartError((error as Error).message);
+    }
+    data.questionCount = 180;
+    data.timeLimitSeconds = 180 * 60;
+  }
 
   // Serializa la asignación por alumno: dos pestañas no pueden reservar el mismo reactivo.
   return db.$transaction(
@@ -46,7 +60,11 @@ export async function startSimulator(input: z.infer<typeof StartSimulatorSchema>
           status: "PUBLICADO",
           deletedAt: null,
           answers: { some: {} },
-          subjectId: data.subjectIds ? { in: data.subjectIds } : undefined,
+          subjectId: fullSubjects
+            ? { in: fullSubjects }
+            : data.subjectIds
+              ? { in: data.subjectIds }
+              : undefined,
         },
         select: {
           id: true,
@@ -58,7 +76,33 @@ export async function startSimulator(input: z.infer<typeof StartSimulatorSchema>
         },
       });
 
-      const selected = selectMixedQuestions(shuffle(candidates), data.questionCount);
+      let selected: typeof candidates;
+      try {
+        const mixed = shuffle(candidates);
+        // Include available interaction types, but never bypass history or subject quotas.
+        const formats = new Set<string>();
+        const reserved = mixed
+          .filter((q) => {
+            const kind = structuredPrompt(q.id)?.kind;
+            if (!kind || formats.has(kind)) return false;
+            formats.add(kind);
+            return true;
+          })
+          .slice(0, Math.floor(data.questionCount / 2));
+        const reservedIds = new Set(reserved.map((q) => q.id));
+        const orderedCandidates = [...reserved, ...mixed.filter((q) => !reservedIds.has(q.id))];
+        selected = fullSubjects
+          ? selectFullExam(orderedCandidates, fullSubjects)
+          : [
+              ...reserved,
+              ...selectMixedQuestions(
+                mixed.filter((q) => !reservedIds.has(q.id)),
+                data.questionCount - reserved.length,
+              ),
+            ];
+      } catch (error) {
+        throw new SimulatorStartError((error as Error).message);
+      }
       if (selected.length < data.questionCount) {
         throw new SimulatorStartError(
           `Quedan ${candidates.length} preguntas nuevas disponibles para esta selección. Se necesitan ${data.questionCount} para otro simulador sin repetir. Hace falta ampliar el banco; puedes continuar en Práctica.`,
@@ -66,12 +110,15 @@ export async function startSimulator(input: z.infer<typeof StartSimulatorSchema>
       }
 
       const answerModes = assignAnswerModes(selected);
+      for (const q of selected) if (structuredPrompt(q.id)) answerModes[q.id] = "STRUCTURED";
       const ordered = shuffle(selected);
       const attempt = await tx.attempt.create({
         data: {
           userId: data.userId,
           type: "SIMULADOR",
           config: {
+            mode: data.mode ?? "short",
+            careerId: data.careerId ?? null,
             timeLimitSeconds: data.timeLimitSeconds,
             questionIds: ordered.map((q) => q.id),
             answerModes,
@@ -86,7 +133,8 @@ export async function startSimulator(input: z.infer<typeof StartSimulatorSchema>
         questions: ordered.map((q) => ({
           ...q,
           answerMode: answerModes[q.id],
-          answers: shuffle(q.answers),
+          interaction: structuredPrompt(q.id),
+          answers: answerModes[q.id] === "STRUCTURED" ? [] : shuffle(q.answers),
         })),
       };
     },

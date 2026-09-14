@@ -30,6 +30,7 @@ describe("acceso a contenido", () => {
 
   it.each([
     "/contenido-nuevo",
+    "/resultados/intento-ajeno",
     "/api/contenido-nuevo",
     "/api/subjects",
     "/api/admin/licenses",

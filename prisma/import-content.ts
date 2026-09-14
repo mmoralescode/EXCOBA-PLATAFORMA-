@@ -90,7 +90,17 @@ async function main() {
             tags: [
               "original",
               "uaq-2026-2",
-              ...(q.demoId ? [`demo:${q.demoId}`] : ["simulador-ampliacion-v2"]),
+              ...(q.demoId
+                ? [`demo:${q.demoId}`]
+                : [
+                    q.id.startsWith("uaq26-coverage-")
+                      ? "cobertura-v3"
+                      : q.id.startsWith("uaq26-interactive-")
+                        ? "interactivo-v4"
+                        : q.id.startsWith("uaq26-reinforce-")
+                          ? "refuerzo-v5"
+                          : "simulador-ampliacion-v2",
+                  ]),
               `tema:${q.topicId}`,
             ],
             answers: {
@@ -125,7 +135,7 @@ async function main() {
         });
       }
     },
-    { timeout: 120000 },
+    { timeout: 240000 },
   );
   console.info(
     `Contenido disponible: ${curriculum.topics.length} temas y ${questions.length} preguntas. Importación idempotente completada.`,

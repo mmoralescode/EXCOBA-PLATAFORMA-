@@ -17,10 +17,10 @@ afterEach(() => vi.unstubAllGlobals());
 describe("Ampliación del simulador", () => {
   it("añade exactamente 40 reactivos sin alterar los 118 anteriores", () => {
     expect(expansion).toHaveLength(40);
-    expect(questions).toHaveLength(158);
+    expect(questions).toHaveLength(372);
     expect(questions.slice(0, baseQuestions.length)).toEqual(baseQuestions);
-    expect(new Set(questions.map((q) => q.id)).size).toBe(158);
-    expect(new Set(questions.map((q) => q.text)).size).toBe(158);
+    expect(new Set(questions.map((q) => q.id)).size).toBe(questions.length);
+    expect(new Set(questions.map((q) => q.text)).size).toBe(questions.length);
     expect(expansion.filter((q) => /^3\.[12]\./.test(q.topicId))).toHaveLength(14);
     expect(expansion.filter((q) => q.topicId.startsWith("3.3."))).toHaveLength(13);
     expect(expansion.filter((q) => q.topicId.startsWith("3.6."))).toHaveLength(13);

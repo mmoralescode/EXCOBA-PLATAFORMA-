@@ -3,6 +3,9 @@ import { curriculum, questions } from "../src/content/bank";
 import { subjectNames } from "../src/content/subject-catalog";
 import baseQuestions from "../src/content/questions.json";
 import expansion from "../src/content/simulator-expansion.json";
+import coverage from "../src/content/coverage-expansion.json";
+import interactive from "../src/content/interactive-expansion.json";
+import reinforcement from "../src/content/reinforcement-expansion.json";
 const filterQuestions = (subjectId = "", topicId = "") =>
   questions.filter(
     (q) =>
@@ -36,7 +39,12 @@ describe("Banco académico UAQ 2026-2", () => {
     for (const q of questions) {
       expect(curriculum.topics.some((t) => t.id === q.topicId)).toBe(true);
       if (q.demoId) expect(mapping[q.demoId]!.apartados).toContain(q.topicId);
-      else expect(expansion.some((added) => added.id === q.id)).toBe(true);
+      else
+        expect(
+          [...expansion, ...coverage, ...interactive, ...reinforcement].some(
+            (added) => added.id === q.id,
+          ),
+        ).toBe(true);
       expect(new Set(q.options).size).toBe(4);
       expect(q.options[q.correctIndex]).toBeTruthy();
       expect(q.explanation.length).toBeGreaterThan(20);

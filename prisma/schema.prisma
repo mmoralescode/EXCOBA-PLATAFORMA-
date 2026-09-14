@@ -336,6 +336,8 @@ model AttemptAnswer {
   selectedAnswerId    String?
   selectedAnswer      Answer?   @relation(fields: [selectedAnswerId], references: [id], onDelete: NoAction, onUpdate: NoAction)
   isCorrect           Boolean?
+  response            Json?
+  credit              Float?
   flaggedForReview    Boolean   @default(false)
   responseTimeSeconds Int?
   answeredAt          DateTime?

@@ -28,7 +28,12 @@ beforeEach(() => {
     callback({
       $queryRaw: mocks.lock,
       question: { findMany: mocks.findQuestions },
-      attempt: { findMany: mocks.history, create: mocks.createAttempt },
+      attempt: {
+        findMany: mocks.history,
+        create: mocks.createAttempt,
+        findUnique: mocks.findAttempt,
+      },
+      attemptAnswer: { upsert: mocks.upsertAnswer },
     }),
   );
   mocks.createAttempt.mockResolvedValue({ id: "attempt-60", startedAt: new Date() });
@@ -171,5 +176,48 @@ describe("Sesiones ampliadas del simulador", () => {
       id: true,
       text: true,
     });
+  });
+  it("recupera una respuesta estructurada sin opciones que delaten la solución", async () => {
+    const id = "uaq26-interactive-v4-06";
+    mocks.findAttempt.mockResolvedValue({
+      id: "attempt-60",
+      userId: "student",
+      type: "SIMULADOR",
+      status: "EN_CURSO",
+      startedAt: new Date(),
+      config: { timeLimitSeconds: 3600, questionIds: [id], answerModes: { [id]: "STRUCTURED" } },
+    });
+    mocks.savedAnswers.mockResolvedValue([
+      { questionId: id, response: { text: "0.5" }, selectedAnswerId: null },
+    ]);
+    mocks.findQuestions.mockResolvedValue([{ id, answers: [{ id: "a1", text: "0.5 mol/L" }] }]);
+    const result = await getSimulatorState("attempt-60", "student");
+    expect(result.questions[0]!.answers).toEqual([]);
+    expect(result.questions[0]!.interaction?.kind).toBe("numeric");
+    expect(result.savedAnswers[0]!.response).toEqual({ text: "0.5" });
+  });
+  it("rechaza una escritura cuando el intento fue entregado mientras esperaba el bloqueo", async () => {
+    const base = {
+      id: "attempt-60",
+      userId: "student",
+      type: "SIMULADOR",
+      status: "EN_CURSO",
+      startedAt: new Date(),
+      config: { timeLimitSeconds: 3600, questionIds: ["q1"] },
+    };
+    mocks.findAttempt
+      .mockResolvedValueOnce(base)
+      .mockResolvedValueOnce({ ...base, status: "ENTREGADO" });
+    mocks.findQuestion.mockResolvedValue({ answers: [{ id: "a1" }] });
+    await expect(
+      saveSimulatorAnswer({
+        attemptId: "attempt-60",
+        userId: "student",
+        questionId: "q1",
+        selectedAnswerId: "a1",
+        flaggedForReview: false,
+      }),
+    ).rejects.toThrow("terminó");
+    expect(mocks.upsertAnswer).not.toHaveBeenCalled();
   });
 });
