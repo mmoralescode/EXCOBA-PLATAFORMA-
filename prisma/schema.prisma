@@ -51,6 +51,7 @@ model User {
   attempts            Attempt[]
   progress            Progress[]
   auditLogsAsActor    AuditLog[]            @relation("AuditActor")
+  feedbackMessages   Feedback[]
   licenseEventsAsAdmin LicenseEvent[]       @relation("LicenseEventAdmin")
   questionsAuthored   Question[]}
 
@@ -387,6 +388,36 @@ model Progress {
 // -----------------------------------------------------------------------
 // Auditoría
 // -----------------------------------------------------------------------
+
+enum FeedbackCategory {
+  SUGERENCIA
+  ERROR
+}
+
+enum FeedbackSection {
+  GENERAL
+  INSTRUCTIVO
+  PRACTICA
+  SIMULADOR
+  PERFIL
+  OTRO
+}
+
+model Feedback {
+  id           String           @id @default(uuid())
+  userId       String
+  user         User             @relation(fields: [userId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  category     FeedbackCategory
+  section      FeedbackSection
+  message      String           @db.VarChar(1000)
+  submissionId String
+  createdAt    DateTime         @default(now())
+  reviewedAt   DateTime?
+
+  @@unique([userId, submissionId])
+  @@index([userId, createdAt])
+  @@index([createdAt, id])
+}
 
 model AuditLog {
   id        String   @id @default(uuid())

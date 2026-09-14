@@ -5,6 +5,7 @@ import { db } from "@/db/client";
 import { getStudyRecommendations } from "@/server/use-cases/study-priority";
 import { formatLicenseDate, licenseExpiryLabel } from "@/components/license-validity";
 import { RecoveryCodeSettings } from "@/components/recovery-code-settings";
+import { FeedbackBox } from "@/components/feedback-box";
 
 const PRIORITY_LABEL: Record<string, string> = {
   ALTA: "Prioridad alta",
@@ -70,6 +71,7 @@ export default async function PerfilPage() {
       </section>
 
       <RecoveryCodeSettings />
+      <FeedbackBox />
 
       <section className="mt-8">
         <h2 className="font-display text-lg text-pizarron">Qué estudiar hoy</h2>

@@ -36,6 +36,9 @@ describe("acceso a contenido", () => {
     "/api/admin/licenses",
     "/api/privacy/accept",
     "/api/account/recovery-code",
+    "/api/feedback",
+    "/api/admin/feedback/report-id",
+    "/admin/feedback",
   ])("protege por defecto incluso rutas futuras: %s", (path) => {
     const response = middleware(new NextRequest(`https://excoba.example${path}`));
     expect(response.status).toBe(path.startsWith("/api/") ? 401 : 307);

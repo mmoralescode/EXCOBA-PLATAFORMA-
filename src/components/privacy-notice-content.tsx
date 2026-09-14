@@ -28,6 +28,11 @@ export function PrivacyNoticeContent() {
           </li>
           <li>Licencia: hash del folio, últimos cuatro caracteres, estado y vigencia.</li>
           <li>
+            Buzón opcional: sugerencias o reportes que envías, sección indicada y fechas de envío y
+            revisión. Se vinculan a tu cuenta y solo administración y soporte pueden consultarlos.
+            No incluyas contraseñas, folios, códigos de recuperación ni datos sensibles.
+          </li>
+          <li>
             Uso académico: carrera seleccionada, ejercicios contestados, resultados, avance y
             recomendaciones de estudio.
           </li>
@@ -46,6 +51,7 @@ export function PrivacyNoticeContent() {
           <li>Proporcionar el instructivo, prácticas, simuladores y seguimiento de avance.</li>
           <li>Calcular recomendaciones de estudio a partir de tu desempeño.</li>
           <li>Atender recuperación de contraseña, soporte y comunicaciones operativas.</li>
+          <li>Recibir sugerencias y reportes de errores para mejorar la plataforma.</li>
           <li>Prevenir fraude, abuso, accesos no autorizados e incidentes de seguridad.</li>
           <li>Cumplir obligaciones legales y conservar evidencia de operaciones relevantes.</li>
         </ul>

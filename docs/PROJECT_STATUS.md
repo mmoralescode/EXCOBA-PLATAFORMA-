@@ -1,5 +1,7 @@
 # Estado del proyecto
 
+> Buzón en Perfil (septiembre de 2026): [sugerencias y reportes de errores](BUZON_SUGERENCIAS.md), con recepción privada para administración/soporte, revisión e idempotencia de envíos.
+
 > Recuperación sin correo (septiembre de 2026): [código secreto de un solo uso](CODIGO_RECUPERACION.md). Se entrega en registros nuevos y se genera en Perfil para cuentas existentes. No requiere proveedor de email; los códigos deben guardarse antes de perder acceso.
 
 > Actualización de septiembre de 2026: consultar [mejoras de aprendizaje](MEJORAS_APRENDIZAJE_2026_09.md). Banco de 372 preguntas para 209 temas; simulador corto/completo y revisión de resultados. Correo real pendiente de credenciales/remitente verificado, aviso integral pendiente de identidad y contacto; prueba móvil real pendiente. Las notas de módulos originales de abajo no acreditan esos pendientes.
