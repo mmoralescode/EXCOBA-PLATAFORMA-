@@ -13,9 +13,13 @@ const mocks = vi.hoisted(() => ({
 }));
 vi.mock("@/db/client", () => ({ db: { feedback: { findMany: mocks.findMany } } }));
 vi.mock("@/lib/authorization", () => ({
-  hasRole: (user: { roles: string[] }, role: string) => user.roles.includes(role),
+  hasRole: (user: { roles: { role: { name: string } }[] }, role: string) =>
+    user.roles.some((item) => item.role.name === role),
 }));
-vi.mock("@/lib/page-authorization", () => ({ requirePageRole: mocks.authorize }));
+vi.mock("@/lib/page-authorization", () => ({
+  requireFeedbackReviewerPage: mocks.authorize,
+  requireAdminShellPage: mocks.authorize,
+}));
 vi.mock("next/link", () => ({ default: "a" }));
 vi.mock("next/navigation", () => ({ useRouter: () => ({ refresh: mocks.refresh }) }));
 vi.mock("react", async (original) => {
@@ -84,7 +88,7 @@ beforeEach(() => {
   mocks.cursor = 0;
   mocks.refs = [];
   mocks.refCursor = 0;
-  mocks.authorize.mockResolvedValue({ roles: ["SUPER_ADMIN"] });
+  mocks.authorize.mockResolvedValue({ roles: [{ role: { name: "SUPER_ADMIN" } }] });
   mocks.findMany.mockResolvedValue([]);
   vi.stubGlobal("React", React);
   vi.stubGlobal("fetch", fetchMock);
@@ -97,7 +101,7 @@ describe("Bandeja privada del buzón", () => {
     const html = renderToStaticMarkup(await FeedbackPage({ searchParams: {} }));
     expect(html).toContain("Acceso restringido");
     expect(html).toContain('href="/perfil#buzon"');
-    expect(mocks.authorize).toHaveBeenCalledWith("SUPER_ADMIN", "SOPORTE");
+    expect(mocks.authorize).toHaveBeenCalledWith();
     expect(mocks.findMany).not.toHaveBeenCalled();
   });
 
@@ -177,14 +181,9 @@ describe("Bandeja privada del buzón", () => {
   it.each(["SUPER_ADMIN", "SOPORTE", "EDITOR_ACADEMICO", "ANALISTA"])(
     "mantiene navegación para %s sin exponer el buzón a otros roles",
     async (role) => {
-      mocks.authorize.mockResolvedValueOnce({ roles: [role] });
+      mocks.authorize.mockResolvedValueOnce({ roles: [{ role: { name: role } }] });
       const html = renderToStaticMarkup(await AdminLayout({ children: <p>Contenido</p> }));
-      expect(mocks.authorize).toHaveBeenCalledWith(
-        "SUPER_ADMIN",
-        "EDITOR_ACADEMICO",
-        "SOPORTE",
-        "ANALISTA",
-      );
+      expect(mocks.authorize).toHaveBeenCalledWith();
       expect(html.includes('href="/admin/feedback"')).toBe(
         ["SUPER_ADMIN", "SOPORTE"].includes(role),
       );

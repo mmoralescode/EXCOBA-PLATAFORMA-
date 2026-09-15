@@ -6,6 +6,7 @@ import { getStudyRecommendations } from "@/server/use-cases/study-priority";
 import { formatLicenseDate, licenseExpiryLabel } from "@/components/license-validity";
 import { RecoveryCodeSettings } from "@/components/recovery-code-settings";
 import { FeedbackBox } from "@/components/feedback-box";
+import { canReviewFeedback } from "@/lib/feedback-permissions";
 
 const PRIORITY_LABEL: Record<string, string> = {
   ALTA: "Prioridad alta",
@@ -72,6 +73,14 @@ export default async function PerfilPage() {
 
       <RecoveryCodeSettings />
       <FeedbackBox />
+      {canReviewFeedback(user) && (
+        <Link
+          href="/admin/feedback"
+          className="mt-3 inline-flex min-h-11 items-center text-sm text-pizarron underline"
+        >
+          Revisar mensajes del buzón
+        </Link>
+      )}
 
       <section className="mt-8">
         <h2 className="font-display text-lg text-pizarron">Qué estudiar hoy</h2>

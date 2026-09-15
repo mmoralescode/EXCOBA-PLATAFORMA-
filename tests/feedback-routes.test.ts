@@ -141,7 +141,15 @@ describe("buzón privado: envío", () => {
   );
 
   it("rechaza identidad, estado y campos administrativos inyectados", async () => {
-    for (const field of ["userId", "actorId", "reviewedAt", "reviewedById", "status", "role"]) {
+    for (const field of [
+      "userId",
+      "actorId",
+      "reviewedAt",
+      "reviewedById",
+      "status",
+      "role",
+      "canReviewFeedback",
+    ]) {
       expect((await call("submit", { ...body, [field]: "attacker-value" })).status).toBe(400);
     }
     expect(mock.submit).not.toHaveBeenCalled();
@@ -200,6 +208,19 @@ describe("buzón privado: envío", () => {
 });
 
 describe("buzón privado: revisión administrativa", () => {
+  it("el permiso limitado autoriza revisión y su revocación bloquea la siguiente solicitud", async () => {
+    mock.session.mockResolvedValueOnce({ ...sessionWithRole("ALUMNO"), canReviewFeedback: true });
+    expect((await call("review")).status).toBe(200);
+    expect(mock.review).toHaveBeenCalledWith(userId, reportId, true);
+    mock.session.mockResolvedValueOnce({ ...sessionWithRole("ALUMNO"), canReviewFeedback: false });
+    expect((await call("review")).status).toBe(403);
+    expect(mock.review).toHaveBeenCalledOnce();
+  });
+
+  it("un permiso inyectado en el cuerpo no autoriza a un alumno", async () => {
+    expect((await call("review", { reviewed: true, canReviewFeedback: true })).status).toBe(403);
+    expect(mock.review).not.toHaveBeenCalled();
+  });
   it("rechaza solicitudes sin sesión", async () => {
     mock.session.mockResolvedValue(null);
     expect((await call("review")).status).toBe(401);
@@ -282,6 +303,7 @@ describe("buzón privado: revisión administrativa", () => {
       { reviewed: true, userId: "other-student" },
       { reviewed: true, actorId: "other-admin" },
       { reviewed: true, message: "mensaje modificado" },
+      { reviewed: true, canReviewFeedback: true },
     ]) {
       expect((await call("review", input)).status).toBe(400);
     }

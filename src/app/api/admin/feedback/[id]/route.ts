@@ -1,6 +1,6 @@
 import { NextRequest } from "next/server";
 import { ZodError } from "zod";
-import { requireRole, UnauthorizedError, ForbiddenError } from "@/lib/authorization";
+import { requireFeedbackReviewer, UnauthorizedError, ForbiddenError } from "@/lib/authorization";
 import { AuthRequestError, readAuthJson } from "@/lib/security/auth-request";
 import { checkRateLimit } from "@/lib/security/rate-limit";
 import { hashToken } from "@/lib/security/tokens";
@@ -14,7 +14,7 @@ import {
 
 export async function PATCH(request: NextRequest, { params }: { params: { id: string } }) {
   try {
-    const user = await requireRole("SUPER_ADMIN", "SOPORTE");
+    const user = await requireFeedbackReviewer();
     const invalid = checkRecoveryRequest(request);
     if (invalid) return invalid;
     if (!checkRateLimit("feedback-review:user:" + hashToken(user.id), 120, 15 * 60 * 1000).allowed)

@@ -38,6 +38,8 @@ model User {
   recoveryCodeUsedAt DateTime?
   name         String
   status       UserStatus @default(ACTIVO)
+  // Scoped inbox access; never grants administrative roles or bypasses a license.
+  canReviewFeedback Boolean @default(false)
   privacyNoticeAcceptedAt DateTime?
   privacyNoticeVersion    String?
   createdAt    DateTime  @default(now())

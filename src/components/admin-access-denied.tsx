@@ -9,7 +9,8 @@ export function AdminAccessDenied() {
       <h1 className="mt-2 font-display text-3xl text-pizarron">Acceso restringido</h1>
       <p className="mt-4 text-sm leading-6 text-ink/75">
         Tu cuenta no tiene permisos para esta sección administrativa. El buzón administrativo solo
-        puede consultarlo el equipo de administración y soporte.
+        puede consultarlo el equipo de administración y soporte o las cuentas autorizadas para
+        revisarlo.
       </p>
       <p className="mt-3 text-sm leading-6 text-ink/75">
         Para enviar una sugerencia o reportar un error no necesitas entrar al panel: utiliza el

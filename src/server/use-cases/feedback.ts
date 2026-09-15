@@ -1,6 +1,7 @@
 import { z } from "zod";
 import { db } from "@/db/client";
 import { canAccessPlatform } from "@/lib/license-access";
+import { canReviewFeedback } from "@/lib/feedback-permissions";
 import { ForbiddenError, UnauthorizedError } from "@/lib/authorization";
 
 export const SubmitFeedbackSchema = z
@@ -80,8 +81,7 @@ export async function reviewFeedback(actorId: string, id: string, reviewed: bool
         include: { roles: { include: { role: true } }, license: true },
       });
       if (!actor || !canAccessPlatform(actor)) throw new UnauthorizedError();
-      if (!actor.roles.some(({ role }) => role.name === "SUPER_ADMIN" || role.name === "SOPORTE"))
-        throw new ForbiddenError();
+      if (!canReviewFeedback(actor)) throw new ForbiddenError();
       const rows = await tx.$queryRaw<
         Array<{ id: string; reviewedAt: Date | null }>
       >`SELECT "id", "reviewedAt" FROM "Feedback" WHERE "id" = ${id} FOR UPDATE`;
@@ -93,9 +93,7 @@ export async function reviewFeedback(actorId: string, id: string, reviewed: bool
         include: { roles: { include: { role: true } }, license: true },
       });
       if (!freshActor || !canAccessPlatform(freshActor)) throw new UnauthorizedError();
-      if (
-        !freshActor.roles.some(({ role }) => role.name === "SUPER_ADMIN" || role.name === "SOPORTE")
-      ) {
+      if (!canReviewFeedback(freshActor)) {
         throw new ForbiddenError();
       }
       if (Boolean(current.reviewedAt) === reviewed)

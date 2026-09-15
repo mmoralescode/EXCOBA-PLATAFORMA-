@@ -174,6 +174,14 @@ beforeEach(() => {
 afterEach(() => vi.useRealTimers());
 
 describe("Registro con reclamo exclusivo de licencia", () => {
+  it("descarta cualquier permiso del buzón o rol enviado en el registro", async () => {
+    const store = fakeDatabase();
+    const tampered = { ...input, canReviewFeedback: true, roles: ["SUPER_ADMIN"] };
+    expect(RegisterInputSchema.parse(tampered)).not.toHaveProperty("canReviewFeedback");
+    await registerUser(tampered);
+    expect(store.users[0]).not.toHaveProperty("canReviewFeedback");
+    expect(store.users[0]!.roles).toEqual({ create: { roleId: "role-alumno" } });
+  });
   it("no admite registrar solamente un UUID sin demostrar posesión del folio", async () => {
     const { folio: ignored, ...withoutSecret } = input;
     expect(ignored).toBe(folio);

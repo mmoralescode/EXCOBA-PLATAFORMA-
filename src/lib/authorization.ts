@@ -1,5 +1,6 @@
 import type { RoleName } from "@prisma/client";
 import { getSessionUser } from "@/lib/session";
+import { canReviewFeedback } from "@/lib/feedback-permissions";
 
 type SessionUser = NonNullable<Awaited<ReturnType<typeof getSessionUser>>>;
 
@@ -30,4 +31,13 @@ export async function requireRole(...allowed: RoleName[]): Promise<SessionUser> 
 
 export function hasRole(user: SessionUser, role: RoleName): boolean {
   return user.roles.some((ur) => ur.role.name === role);
+}
+
+/** Requires a current session and the narrowly scoped inbox permission. */
+export async function requireFeedbackReviewer(): Promise<SessionUser> {
+  const user = await requireUser();
+  if (!canReviewFeedback(user)) {
+    throw new ForbiddenError("No tienes permisos para consultar el buzón.");
+  }
+  return user;
 }

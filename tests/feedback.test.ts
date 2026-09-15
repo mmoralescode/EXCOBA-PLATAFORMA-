@@ -152,6 +152,20 @@ describe("Buzón vinculado a cuenta con cuota persistente", () => {
 });
 
 describe("Acuse administrativo de revisión", () => {
+  it("autoriza a una cuenta con permiso limitado sin modificar sus roles", async () => {
+    m.user.mockResolvedValue({ ...student(), canReviewFeedback: true });
+    await expect(reviewFeedback("student", id, true)).resolves.toEqual({ id, reviewedAt: now });
+    expect(m.audit.mock.calls[0]![0].data.actorId).toBe("student");
+    expect(m.update.mock.calls[0]![0].data).toEqual({ reviewedAt: now });
+  });
+  it("rechaza el permiso limitado revocado mientras esperaba el bloqueo", async () => {
+    m.user
+      .mockResolvedValueOnce({ ...student(), canReviewFeedback: true })
+      .mockResolvedValueOnce({ ...student(), canReviewFeedback: false });
+    await expect(reviewFeedback("student", id, true)).rejects.toBeInstanceOf(ForbiddenError);
+    expect(m.update).not.toHaveBeenCalled();
+    expect(m.audit).not.toHaveBeenCalled();
+  });
   beforeEach(() =>
     m.user.mockResolvedValue({ ...student(), roles: [{ role: { name: "SOPORTE" } }] }),
   );

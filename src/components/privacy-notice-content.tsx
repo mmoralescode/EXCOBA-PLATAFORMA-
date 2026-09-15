@@ -29,8 +29,9 @@ export function PrivacyNoticeContent() {
           <li>Licencia: hash del folio, últimos cuatro caracteres, estado y vigencia.</li>
           <li>
             Buzón opcional: sugerencias o reportes que envías, sección indicada y fechas de envío y
-            revisión. Se vinculan a tu cuenta y solo administración y soporte pueden consultarlos.
-            No incluyas contraseñas, folios, códigos de recuperación ni datos sensibles.
+            revisión. Se vinculan a tu cuenta y solo administración, soporte y las personas
+            autorizadas para revisar el buzón pueden consultarlos. No incluyas contraseñas, folios,
+            códigos de recuperación ni datos sensibles.
           </li>
           <li>
             Uso académico: carrera seleccionada, ejercicios contestados, resultados, avance y
