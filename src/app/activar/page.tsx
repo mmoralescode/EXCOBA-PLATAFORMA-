@@ -148,6 +148,53 @@ export default function ActivarPage() {
           </p>
         )}
 
+      {step !== "folio" && (
+        <aside
+          id="account-security-note"
+          role="note"
+          aria-labelledby="account-security-title"
+          className="mt-4 space-y-2 rounded-md border border-acento/30 bg-white p-4 text-sm leading-6 text-ink/80"
+        >
+          <h2 id="account-security-title" className="font-medium text-pizarron">
+            Importante: protege el acceso a tu cuenta
+          </h2>
+          <p>
+            Es de suma importancia que recuerdes tu contraseña. Sigue estos pasos para no perder el
+            acceso:
+          </p>
+          <ol className="list-decimal space-y-2 pl-5">
+            <li>
+              Guarda tu contraseña en un gestor de contraseñas o en un lugar privado. No la
+              compartas.
+            </li>
+            <li>
+              {step === "registro"
+                ? "Al crear tu cuenta, copia y guarda el código de recuperación que aparecerá en pantalla."
+                : recoveryCode
+                  ? "Copia y guarda el código de recuperación que aparece abajo antes de continuar."
+                  : "Si el código no aparece, inicia sesión con la contraseña que elegiste y genera uno nuevo desde Perfil."}{" "}
+              Solo se muestra una vez. Es distinto del folio y cada código se puede usar una sola
+              vez. No lo compartas.
+            </li>
+            <li>
+              Si olvidas tu contraseña, entra a Iniciar sesión → Olvidé mi contraseña. Escribe el
+              correo de tu cuenta y el código de recuperación; elige y confirma una nueva
+              contraseña. El código utilizado dejará de funcionar.
+            </li>
+            <li>
+              Después, inicia sesión con tu nueva contraseña y genera otro código en Perfil →
+              Protege el acceso a tu cuenta → Generar código de recuperación. Confirma tu contraseña
+              actual y guarda el nuevo código para una futura recuperación.
+            </li>
+          </ol>
+          <p>
+            Puedes recuperar tu cuenta nuevamente con un código nuevo y válido. Si vuelves a olvidar
+            la contraseña sin haber guardado un código nuevo y válido, no podrás recuperarla
+            mediante este método.
+          </p>
+        </aside>
+      )}
+
       {step === "folio" && (
         <form
           onSubmit={handleValidateFolio}
@@ -228,6 +275,7 @@ export default function ActivarPage() {
               onChange={(e) => setPassword(e.target.value)}
               className="rounded-md border border-ink/20 px-3 py-2 text-ink outline-none focus:border-pizarron"
               autoComplete="new-password"
+              aria-describedby="account-security-note"
             />
           </label>
 

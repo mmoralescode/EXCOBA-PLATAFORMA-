@@ -196,6 +196,24 @@ describe("Interfaz de recuperación sin correo", () => {
     await submit(render(ActivarPage));
     tree = render(ActivarPage);
     expect(textOf(tree)).toContain("Crea tu cuenta");
+    const notice = node(tree, "aside");
+    expect(notice.props.role).toBe("note");
+    expect(notice.props.id).toBe("account-security-note");
+    expect(textOf(notice).replace(/\s+/g, " ")).toContain(
+      "Es de suma importancia que recuerdes tu contraseña",
+    );
+    expect(textOf(notice).replace(/\s+/g, " ")).toContain("cada código se puede usar una sola vez");
+    expect(textOf(notice).replace(/\s+/g, " ")).toContain("genera otro código en Perfil");
+    expect(elements(notice).filter((element) => element.type === "li")).toHaveLength(4);
+    expect(textOf(notice).replace(/\s+/g, " ")).toContain("Iniciar sesión → Olvidé mi contraseña");
+    expect(textOf(notice).replace(/\s+/g, " ")).toContain(
+      "Protege el acceso a tu cuenta → Generar código de recuperación",
+    );
+    expect(textOf(notice).replace(/\s+/g, " ")).toContain("Al crear tu cuenta, copia y guarda");
+    expect(textOf(notice).replace(/\s+/g, " ")).toContain(
+      "Puedes recuperar tu cuenta nuevamente con un código nuevo y válido",
+    );
+    expect(node(tree, "input", 2).props["aria-describedby"]).toBe("account-security-note");
     change(node(tree, "input", 0), "Alumno de prueba");
     change(node(tree, "input", 1), "alumno@example.test");
     change(node(tree, "input", 2), "NuevaClaveSegura123");
@@ -206,6 +224,13 @@ describe("Interfaz de recuperación sin correo", () => {
     tree = render(ActivarPage);
     const display = node(tree, RecoveryCodeDisplay);
     expect(display.props.code).toBe("REC-TEST-ONLY");
+    expect(textOf(node(tree, "aside")).replace(/\s+/g, " ")).toContain(
+      "Copia y guarda el código de recuperación que aparece abajo antes de continuar",
+    );
+    expect(textOf(node(tree, "aside")).replace(/\s+/g, " ")).toContain(
+      "sin haber guardado un código nuevo y válido, no podrás recuperarla mediante este método",
+    );
+    expect(textOf(tree)).not.toContain("no habrá otra oportunidad");
     expect(hooks.push).not.toHaveBeenCalled();
     expect(elements(tree).some((element) => element.type === "form")).toBe(false);
     expect(hooks.states[8]).toBe("");
@@ -228,6 +253,10 @@ describe("Interfaz de recuperación sin correo", () => {
     tree = render(ActivarPage);
     expect(textOf(tree)).toContain("Tu cuenta ya se creó");
     expect(textOf(tree)).toContain("genera uno nuevo desde tu perfil");
+    expect(textOf(node(tree, "aside")).replace(/\s+/g, " ")).toContain(
+      "Si el código no aparece, inicia sesión con la contraseña que elegiste",
+    );
+    expect(textOf(node(tree, "aside"))).not.toContain("que aparece abajo");
     expect(elements(tree).some((element) => element.type === "form")).toBe(false);
   });
 

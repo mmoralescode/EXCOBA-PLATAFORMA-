@@ -9,6 +9,8 @@
 
 El código es distinto del folio. No modifica su propietario ni vigencia, roles o progreso académico. Recuperar una contraseña no reactiva una licencia vencida.
 
+Al crear la cuenta y al mostrar el código tras el canje, se muestra un aviso destacado para guardar la contraseña y el código. Explica que cada código se usa una sola vez y que debe generarse un reemplazo en Perfil después de usarlo; **no** impone un límite de una recuperación por cuenta. El campo de contraseña queda asociado al aviso para lectores de pantalla. El aviso no cambia la generación, el consumo ni el reemplazo de códigos.
+
 **Importante:** quien ya olvidó su contraseña y nunca generó/guardó un código no puede usar este método retroactivamente. No existe un restablecimiento público con el folio ni una puerta de acceso para soporte. Las cuentas anteriores no reciben códigos predecibles o publicados en lote: cada alumno debe generarlo mientras conserve acceso a su cuenta.
 
 ## Seguridad y límites
